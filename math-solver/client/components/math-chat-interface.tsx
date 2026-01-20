@@ -14,11 +14,14 @@ import {
   Upload,
   X,
   TrendingUp,
+  BrainCircuit,
   Lightbulb,
   CheckCircle2
 } from 'lucide-react';
+import { MathSymbolPicker } from './math-symbol-picker';
+import { PracticeProblemCard } from './practice-problem-card';
 
-interface Step {
+export interface Step {
   id: number;
   title: string;
   explanation: string;
@@ -27,12 +30,18 @@ interface Step {
   visualDescription?: string;
 }
 
-interface Solution {
+export interface PracticeProblem {
+  problem: string;
+  correctAnswer: string;
+}
+
+export interface Solution {
   problem: string;
   steps: Step[];
   finalAnswer: string;
   methodology: string;
   keyInsights?: string[];
+  practiceProblem?: PracticeProblem;
 }
 
 interface Message {
@@ -63,6 +72,24 @@ export function MathChatInterface({ onSolveProblem }: MathChatInterfaceProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSymbolSelect = (symbol: string) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newValue = input.substring(0, start) + symbol + input.substring(end);
+      setInput(newValue);
+      // Restore cursor position and focus
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + symbol.length, start + symbol.length);
+      }, 0);
+    } else {
+      setInput(prev => prev + symbol);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -118,6 +145,44 @@ export function MathChatInterface({ onSolveProblem }: MathChatInterfaceProps) {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: `I'll solve this problem step by step:`,
+        solution: solution,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCheckMethod = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const problemText = input.trim();
+    // Prefix with explicit marker for the backend/mock to recognize
+    const checkRequest = `CHECK_METHOD: ${problemText}`;
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: problemText, // Display original text to user
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // Pass the prefixed request
+      const solution = await onSolveProblem(checkRequest);
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `I've analyzed your method. Here's my feedback:`,
         solution: solution,
         timestamp: new Date(),
       };
@@ -287,6 +352,18 @@ export function MathChatInterface({ onSolveProblem }: MathChatInterfaceProps) {
                           <div className="text-xs text-muted-foreground italic">
                             Method used: {message.solution.methodology}
                           </div>
+
+                          {/* Practice Problem */}
+                          {message.solution.practiceProblem && (
+                            <PracticeProblemCard 
+                              practiceProblem={message.solution.practiceProblem}
+                              onSolveRequest={(problem) => {
+                                setInput(problem);
+                                // Optional: auto-submit
+                                // handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+                              }}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -376,10 +453,11 @@ export function MathChatInterface({ onSolveProblem }: MathChatInterfaceProps) {
               
               <div className="flex-1 relative">
                 <Textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your math problem here... (e.g., Solve x² + 5x + 6 = 0)"
-                  className="min-h-15 max-h-30 resize-none pr-12"
+                  className="min-h-15 max-h-30 resize-none pr-28"
                   disabled={isLoading}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -388,6 +466,27 @@ export function MathChatInterface({ onSolveProblem }: MathChatInterfaceProps) {
                     }
                   }}
                 />
+                
+                {/* Math Symbol Picker */}
+                <div className="absolute right-14 bottom-3 z-10">
+                  <MathSymbolPicker onSymbolSelect={handleSymbolSelect} />
+                </div>
+
+                {/* Check Method Button */}
+                <div className="absolute right-25 bottom-3 z-10">
+                  <Button
+                    type="button"
+                    variant="ghost" 
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    onClick={handleCheckMethod}
+                    disabled={isLoading || !input.trim()}
+                    title="Analyze my method & suggest improvements"
+                  >
+                    <BrainCircuit className="h-5 w-5" />
+                  </Button>
+                </div>
+
                 {/* Upload button inside textarea */}
                 <button
                   type="button"

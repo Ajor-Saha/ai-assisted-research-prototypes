@@ -1,25 +1,8 @@
 'use client';
 
-import { MathChatInterface } from '@/components/math-chat-interface';
+import { MathChatInterface, Solution } from '@/components/math-chat-interface';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Calculator, Sparkles } from 'lucide-react';
-
-interface Step {
-  id: number;
-  title: string;
-  explanation: string;
-  equation?: string;
-  visualType?: 'graph' | 'diagram' | 'table';
-  visualDescription?: string;
-}
-
-interface Solution {
-  problem: string;
-  steps: Step[];
-  finalAnswer: string;
-  methodology: string;
-  keyInsights?: string[];
-}
 
 export default function MathSolverPage() {
   const generateSolution = async (problem: string, imageFile?: File): Promise<Solution> => {
@@ -53,6 +36,74 @@ export default function MathSolverPage() {
         keyInsights: [
           "Image-based problems allow you to upload handwritten work",
           "The system can recognize mathematical notation and diagrams"
+        ]
+      };
+    }
+
+    // Method Analysis Request
+    if (problem.startsWith('CHECK_METHOD:')) {
+      const actualProblem = problem.replace('CHECK_METHOD:', '').trim();
+      
+      // Example: Analyzing quadratic equation methods
+      if (actualProblem.includes('x²') || actualProblem.includes('completing the square') || actualProblem.includes('quadratic')) {
+        return {
+          problem: "Analysis of: " + actualProblem,
+          steps: [
+            {
+              id: 1,
+              title: "Analyze Current Approach",
+              explanation: "You seem to be solving a quadratic equation. If you are using 'Completing the Square', this is a valid method but can be arithmetic-heavy if the middle coefficient (b) is odd.",
+              visualType: 'diagram',
+              visualDescription: "Comparison of method complexity: Factoring vs. Formula vs. Completing Square"
+            },
+            {
+              id: 2,
+              title: "Predict Outcome",
+              explanation: "This method WILL lead you to the correct answer. However, it requires careful handling of fractions if not clean.",
+              equation: "Steps remaining: ~3-4 steps"
+            },
+            {
+              id: 3,
+              title: "Suggest Optimization",
+              explanation: "A shorter method might be the Quadratic Formula or Factoring (if applicable).",
+              equation: "Quadratic Formula: x = (-b ± √(b²-4ac))/2a"
+            }
+          ],
+          finalAnswer: "Method is Valid. Optimization: Quadratic Formula is likely faster here.",
+          methodology: "Method Verification & Optimization Analysis",
+          keyInsights: [
+            "Completing the square provides insight into the vertex form",
+            "Quadratic formula is universally applicable and often less error-prone for calculation"
+          ]
+        };
+      }
+
+      // Generic Analysis
+      return {
+        problem: "Analysis of: " + actualProblem,
+        steps: [
+          {
+            id: 1,
+            title: "Method Validity Check",
+            explanation: "I've analyzed your current step. The logic appears mathematically sound and follows standard principles.",
+            equation: "Status: Valid Path"
+          },
+          {
+            id: 2,
+            title: "Efficiency Prediction",
+            explanation: "You are on the right track. This method is standard for this type of problem.",
+          },
+          {
+            id: 3,
+            title: "Alternative Approaches",
+            explanation: "There are no significantly shorter methods for this specific problem type. Proceed with your current approach.",
+          }
+        ],
+        finalAnswer: "Proceed with current method.",
+        methodology: "Algorithmic Complexity Analysis",
+        keyInsights: [
+          "Your approach is logically consistent",
+          "No critical errors detected in the current step"
         ]
       };
     }
@@ -108,7 +159,11 @@ export default function MathSolverPage() {
           "The discriminant (49) being positive confirms two distinct real solutions",
           "The coefficient 'a' being positive (2) means the parabola opens upward",
           "The vertex of the parabola is located at x = -b/(2a) = -5/4 = -1.25"
-        ]
+        ],
+        practiceProblem: {
+          problem: "Solve: x² + 4x - 12 = 0",
+          correctAnswer: "-6, 2"
+        }
       };
     }
 
@@ -204,7 +259,11 @@ export default function MathSolverPage() {
           "The definite integral gives us the exact area under a curve",
           "For y = x², the area from 0 to a is a³/3",
           "The area represents accumulation - in this case, total space under the curve"
-        ]
+        ],
+        practiceProblem: {
+          problem: "Find the area under y = 2x from x=0 to x=4",
+          correctAnswer: "16"
+        }
       };
     }
 
