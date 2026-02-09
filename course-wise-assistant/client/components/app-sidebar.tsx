@@ -5,17 +5,14 @@ import {
   AudioWaveform,
   BookOpen,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Map,
-  PieChart,
+
   Settings2,
   GraduationCap,
   Plus,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
@@ -81,25 +78,47 @@ const data = {
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
+      title: "Text Assistant",
+      url: "/dashboard",
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
+          title: "Add Chat",
           url: "#",
         },
         {
-          title: "Get Started",
+          title: "AI BOT",
+          url: "/dashboard/text-assistant/text-ai-chat",
+        },
+      ],
+    },
+    {
+      title: "Math Assistant",
+      url: "/dashboard",
+      icon: AudioWaveform,
+      items: [
+        {
+          title: "Add Chat",
           url: "#",
         },
         {
-          title: "Tutorials",
-          url: "#",
+          title: "AI BOT",
+          url: "/dashboard/math-assistant/math-ai-chat",
+        },
+      ],
+    },
+    {
+      title: "Research Assistant",
+      url: "/dashboard",
+      icon: Command,
+      items: [
+        {
+          title: "Add Chat",
+          url: "/dashboard/research-assistant/add-chat",
         },
         {
-          title: "Changelog",
-          url: "#",
+          title: "AI BOT",
+          url: "/dashboard/research-assistant/research-ai-chat",
         },
       ],
     },
@@ -127,23 +146,7 @@ const data = {
       ],
     },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+  
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -154,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

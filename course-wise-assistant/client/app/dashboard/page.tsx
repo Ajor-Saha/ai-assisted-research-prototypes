@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AppSidebar } from "@/components/app-sidebar"
 import { CourseCard } from "@/components/course-card"
 import { CreateCourseDialog } from "@/components/create-course-dialog"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -16,11 +15,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Home, BookOpen, TrendingUp, Calendar } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -84,49 +79,46 @@ export default function Page() {
   }
 
   const totalMaterials = courses.reduce((sum, course) => sum + course.materialsCount, 0)
-  const totalMessages = courses.reduce((sum, course) => sum + course.messagesCount, 0)
   const upcomingExams = courses.filter(c => c.examDate).length
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 w-full justify-between">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/">
-                      Home
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Link href="/">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Home className="h-4 w-4" />
-                  <span className="hidden sm:inline">Home</span>
-                </Button>
-              </Link>
-            </div>
+    <>
+      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+        <div className="flex items-center gap-2 px-4 w-full justify-between">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/">
+                    Home
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-6 p-6">
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">Home</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+      <div className="flex flex-1 flex-col gap-6 p-6">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
@@ -189,8 +181,7 @@ export default function Page() {
               </div>
             </Card>
           )}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </>
   )
 }

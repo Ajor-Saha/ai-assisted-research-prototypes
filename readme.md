@@ -65,3 +65,19 @@ Navigate to individual project directories to run specific assistants. Each proj
 ## Development
 
 This is a thesis project exploring different applications of AI assistants in educational and productivity contexts.
+
+
+### Information
+- Conduct six FGD sessions in Phase 1
+
+- Identify prototype ideas from the FGD sessions
+
+- Validate the FGD findings through a nationwide survey
+
+- Develop low-fidelity prototypes and conduct prototype-specific FGD sessions
+
+- Collect feedback and refine the designs into mid-fidelity prototypes
+
+- Conduct FGD sessions using the actual frontend designs
+
+- After gathering feedback, develop high-fidelity, interactive prototypes and perform lab usability testing

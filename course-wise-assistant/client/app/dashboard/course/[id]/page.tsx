@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, use } from "react";
-import Link from "next/link";
-import { AppSidebar } from "@/components/app-sidebar"
 import { CourseChatInterface } from "@/components/course-chat-interface"
 import { MaterialUpload } from "@/components/material-upload"
 import { StudyPathRecommendations } from "@/components/study-path-recommendations"
@@ -27,11 +25,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Home, MessageSquare, Upload, TrendingUp, BookOpen, BrainCircuit, Users, BarChart, Library, Award, Mic } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -92,10 +86,8 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
   const [showSubscription, setShowSubscription] = useState(false)
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b">
+    <>
+      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b">
           <div className="flex items-center gap-2 px-4 w-full justify-between">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
@@ -272,7 +264,6 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
           </Tabs>
         </div>
         <SubscriptionModal open={showSubscription} onOpenChange={setShowSubscription} />
-      </SidebarInset>
-    </SidebarProvider>
+    </>
   )
 }
