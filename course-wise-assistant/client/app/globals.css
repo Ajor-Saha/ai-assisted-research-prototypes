@@ -123,3 +123,69 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom KaTeX Math Styling */
+.katex-display {
+  margin: 1.5rem 0 !important;
+  padding: 1rem !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05)) !important;
+  border-left: 4px solid rgb(139, 92, 246) !important;
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.dark .katex-display {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1)) !important;
+  border-left-color: rgb(167, 139, 250) !important;
+}
+
+.katex {
+  font-size: 1.1em !important;
+}
+
+.katex-display > .katex {
+  font-size: 1.2em !important;
+}
+
+/* Inline math styling */
+.katex-inline {
+  padding: 0.125rem 0.25rem;
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 0.25rem;
+}
+
+.dark .katex-inline {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+/* Math in prose */
+.prose .katex-display {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.prose code:has(.katex) {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Scrollbar for wide equations */
+.katex-display::-webkit-scrollbar {
+  height: 6px;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
