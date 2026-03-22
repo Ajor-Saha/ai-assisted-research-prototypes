@@ -3,11 +3,37 @@ import { nanoid } from 'nanoid';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiResponse } from '../utils/api-response';
 import { db } from '../db';
-import { mathChatTable, mathChatMessageTable } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import {
+  mathChatTable,
+  mathChatMessageTable,
+  mathMessageWebSearchTable,
+} from '../db/schema';
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { CambClient } from '@camb-ai/sdk';
+
+interface WebSearchResultItem {
+  title: string;
+  link: string;
+  displayLink: string;
+  snippet: string;
+}
+
+interface GeminiResourceResponse {
+  sources?: Array<{
+    title?: string;
+    link?: string;
+    snippet?: string;
+  }>;
+}
+
+interface PersistedWebSearchSource {
+  title: string;
+  link: string;
+  displayLink: string;
+  snippet: string;
+}
 
 // Initialize Google Gemini model for math assistance
 const getGeminiMathModel = () => {
@@ -49,6 +75,22 @@ For each problem, structure your response as:
 5. **Visual Explanation** (when applicable): Describe how to visualize the problem
 6. **Key Insights**: Summarize important takeaways or common mistakes to avoid
 
+VISUALIZATION POLICY (MANDATORY):
+- If the user asks for a visualization, flow, process, or diagram, output a Mermaid diagram in a fenced code block.
+- Always use this exact fence format:
+  \`\`\`mermaid
+  flowchart TD
+  A[Step A] --> B[Step B]
+  \`\`\`
+- Prefer simple, readable nodes and connections.
+- Keep diagrams concise (3-8 main components).
+- Use directional flowcharts for procedures unless another diagram type is explicitly requested.
+
+STEP-BY-STEP PRIORITY:
+- Always prioritize a clear step-by-step solution before or alongside visualization.
+- For word problems and workflows, include a "Visualization" subsection with an ASCII diagram.
+- For direct computational questions, include visualization only when it improves understanding.
+
 MATHEMATICAL FORMATTING:
 - Use markdown for clear structure
 - Use inline code for variables: \`x\`, \`y\`
@@ -79,6 +121,149 @@ SPECIAL HANDLING:
 - **Multiple Solutions**: Explain all possible solutions and when they apply
 
 Remember: The goal is not just to provide an answer, but to teach the student how to solve similar problems independently.`;
+
+const parseDisplayLink = (url: string): string => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname.replace(/^www\./, '');
+  } catch {
+    return 'web';
+  }
+};
+
+const buildFallbackSearchSources = (query: string): WebSearchResultItem[] => {
+  const encodedQuery = encodeURIComponent(query);
+
+  return [
+    {
+      title: `Wikipedia search for: ${query}`,
+      link: `https://en.wikipedia.org/w/index.php?search=${encodedQuery}`,
+      displayLink: 'wikipedia.org',
+      snippet: 'Reference-style explanations and linked topics.',
+    },
+    {
+      title: `Khan Academy search for: ${query}`,
+      link: `https://www.khanacademy.org/search?page_search_query=${encodedQuery}`,
+      displayLink: 'khanacademy.org',
+      snippet: 'Step-by-step lessons and problem walkthroughs.',
+    },
+    {
+      title: `Wolfram resources for: ${query}`,
+      link: `https://www.wolframalpha.com/input?i=${encodedQuery}`,
+      displayLink: 'wolframalpha.com',
+      snippet: 'Computational results and symbolic math references.',
+    },
+    {
+      title: `MathWorld search for: ${query}`,
+      link: `https://mathworld.wolfram.com/search/?query=${encodedQuery}`,
+      displayLink: 'mathworld.wolfram.com',
+      snippet: 'Glossary-style mathematical definitions and theorems.',
+    },
+  ];
+};
+
+const generateExternalResourcesWithGemini = async (
+  searchQuery: string,
+  userQuestion: string,
+  assistantAnswer: string
+): Promise<WebSearchResultItem[]> => {
+  const model = getGeminiMathModel();
+
+  const resourcePrompt = `You are a math learning resource curator.
+
+User question:
+${userQuestion}
+
+Assistant answer:
+${assistantAnswer}
+
+Search intent:
+${searchQuery}
+
+Task:
+- Return ONLY valid JSON.
+- JSON shape must be:
+{
+  "sources": [
+    {"title":"...","link":"https://...","snippet":"..."}
+  ]
+}
+- Provide 4 to 6 high-quality external learning links relevant to the math topic.
+- Prefer reputable domains: khanacademy.org, wikipedia.org, mathworld.wolfram.com, wolframalpha.com, brilliant.org, mit.edu, coursera.org, paulsonline notes sites.
+- Every link must start with https:// and be a plausible stable educational URL.
+- Keep each snippet under 180 characters.
+- Do not add markdown fences or any non-JSON text.`;
+
+  const response = await model.invoke([
+    new SystemMessage('You output strict JSON only.'),
+    new HumanMessage(resourcePrompt),
+  ]);
+
+  const rawContent = response.content.toString().trim();
+  const sanitizedContent = rawContent
+    .replace(/^```json\s*/i, '')
+    .replace(/^```/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
+  let parsedResponse: GeminiResourceResponse | null = null;
+
+  try {
+    parsedResponse = JSON.parse(sanitizedContent) as GeminiResourceResponse;
+  } catch {
+    return buildFallbackSearchSources(searchQuery);
+  }
+
+  const generatedSources = (parsedResponse.sources ?? [])
+    .filter((source) => Boolean(source?.title && source?.link))
+    .map((source) => {
+      const normalizedLink = (source.link ?? '').trim();
+      return {
+        title: (source.title ?? 'Learning resource').trim(),
+        link: normalizedLink,
+        displayLink: parseDisplayLink(normalizedLink),
+        snippet: (source.snippet ?? 'Useful external resource for this topic.').trim(),
+      };
+    })
+    .filter((source) => /^https:\/\//i.test(source.link))
+    .slice(0, 6);
+
+  if (generatedSources.length === 0) {
+    return buildFallbackSearchSources(searchQuery);
+  }
+
+  const dedupedSources = Array.from(
+    new Map(generatedSources.map((source) => [source.link, source])).values()
+  );
+
+  return dedupedSources.length > 0
+    ? dedupedSources
+    : buildFallbackSearchSources(searchQuery);
+};
+
+const summarizeSearchResults = async (
+  userQuestion: string,
+  assistantAnswer: string,
+  searchQuery: string,
+  searchResults: WebSearchResultItem[]
+): Promise<string> => {
+  const model = getGeminiMathModel();
+
+  const sourcesContext = searchResults
+    .map((source, index) => {
+      return `${index + 1}. ${source.title}\nURL: ${source.link}\nSnippet: ${source.snippet}`;
+    })
+    .join('\n\n');
+
+  const prompt = `You are helping a student with a math question.\n\nOriginal student question:\n${userQuestion}\n\nAssistant answer:\n${assistantAnswer}\n\nWeb search query used:\n${searchQuery}\n\nWeb sources:\n${sourcesContext}\n\nCreate a concise response in markdown with:\n1) **Web-validated insight**: 2-4 sentences connecting the search sources to the math problem.\n2) **Best sources**: 3 bullet points, each with what the source is useful for.\n3) **How to use next**: 2 short action bullets the student can do now.\n\nDo not invent facts. If sources are weak, mention uncertainty briefly.`;
+
+  const response = await model.invoke([
+    new SystemMessage('You summarize math-related web sources for students with high factual caution.'),
+    new HumanMessage(prompt),
+  ]);
+
+  return response.content.toString();
+};
 
 /**
  * Create a new math chat
@@ -390,6 +575,365 @@ export const addMathChatMessage = asyncHandler(
 );
 
 /**
+ * Delete a message and its related pair message
+ * @route DELETE /api/math-chats/:chatId/messages/:messageId
+ */
+export const deleteMathChatMessagePair = asyncHandler(
+  async (req: Request & { user?: any }, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const chatId = Array.isArray(req.params.chatId)
+        ? req.params.chatId[0]
+        : req.params.chatId;
+      const messageId = Array.isArray(req.params.messageId)
+        ? req.params.messageId[0]
+        : req.params.messageId;
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json(new ApiResponse(401, {}, 'User not authenticated'));
+      }
+
+      const [chat] = await db
+        .select()
+        .from(mathChatTable)
+        .where(
+          and(
+            eq(mathChatTable.mathChatId, chatId),
+            eq(mathChatTable.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!chat) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'Math chat not found'));
+      }
+
+      const chatMessages = await db
+        .select({
+          messageId: mathChatMessageTable.messageId,
+          role: mathChatMessageTable.role,
+        })
+        .from(mathChatMessageTable)
+        .where(eq(mathChatMessageTable.mathChatId, chatId))
+        .orderBy(asc(mathChatMessageTable.createdAt));
+
+      const targetIndex = chatMessages.findIndex((message) => message.messageId === messageId);
+
+      if (targetIndex === -1) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'Message not found'));
+      }
+
+      const targetMessage = chatMessages[targetIndex];
+      const messageIdsToDelete = [targetMessage.messageId];
+
+      if (targetMessage.role === 'user') {
+        const nextMessage = chatMessages[targetIndex + 1];
+        if (nextMessage && nextMessage.role === 'assistant') {
+          messageIdsToDelete.push(nextMessage.messageId);
+        }
+      } else {
+        const previousMessage = chatMessages[targetIndex - 1];
+        if (previousMessage && previousMessage.role === 'user') {
+          messageIdsToDelete.push(previousMessage.messageId);
+        }
+      }
+
+      await db
+        .delete(mathChatMessageTable)
+        .where(
+          and(
+            eq(mathChatMessageTable.mathChatId, chatId),
+            inArray(mathChatMessageTable.messageId, messageIdsToDelete)
+          )
+        );
+
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          { deletedMessageIds: messageIdsToDelete },
+          'Message pair deleted successfully'
+        )
+      );
+    } catch (error) {
+      console.error('Error deleting message pair:', error);
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, 'Internal server error'));
+    }
+  }
+);
+
+/**
+ * Run web search for an assistant message and persist enriched results
+ * @route POST /api/math-chats/:chatId/messages/:messageId/web-search
+ */
+export const runMathMessageWebSearch = asyncHandler(
+  async (req: Request & { user?: any }, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const chatId = Array.isArray(req.params.chatId)
+        ? req.params.chatId[0]
+        : req.params.chatId;
+      const messageId = Array.isArray(req.params.messageId)
+        ? req.params.messageId[0]
+        : req.params.messageId;
+      const forceRefresh = Boolean(req.body?.forceRefresh);
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json(new ApiResponse(401, {}, 'User not authenticated'));
+      }
+
+      const [chat] = await db
+        .select()
+        .from(mathChatTable)
+        .where(
+          and(
+            eq(mathChatTable.mathChatId, chatId),
+            eq(mathChatTable.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!chat) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'Math chat not found'));
+      }
+
+      const [targetMessage] = await db
+        .select()
+        .from(mathChatMessageTable)
+        .where(
+          and(
+            eq(mathChatMessageTable.mathChatId, chatId),
+            eq(mathChatMessageTable.messageId, messageId)
+          )
+        )
+        .limit(1);
+
+      if (!targetMessage) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'Message not found'));
+      }
+
+      if (targetMessage.role !== 'assistant') {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, {}, 'Web search is available only for assistant messages'));
+      }
+
+      if (!forceRefresh) {
+        const [existingSearch] = await db
+          .select()
+          .from(mathMessageWebSearchTable)
+          .where(
+            and(
+              eq(mathMessageWebSearchTable.mathChatId, chatId),
+              eq(mathMessageWebSearchTable.messageId, messageId)
+            )
+          )
+          .orderBy(desc(mathMessageWebSearchTable.createdAt))
+          .limit(1);
+
+        if (existingSearch) {
+          return res.status(200).json(
+            new ApiResponse(
+              200,
+              {
+                searchId: existingSearch.searchId,
+                messageId,
+                mathChatId: chatId,
+                searchQuery: existingSearch.searchQuery,
+                summary: existingSearch.summary,
+                sources: existingSearch.sources,
+                createdAt: existingSearch.createdAt,
+                cached: true,
+              },
+              'Existing web search result retrieved successfully'
+            )
+          );
+        }
+      }
+
+      const chatMessages = await db
+        .select({
+          messageId: mathChatMessageTable.messageId,
+          role: mathChatMessageTable.role,
+          content: mathChatMessageTable.content,
+          createdAt: mathChatMessageTable.createdAt,
+        })
+        .from(mathChatMessageTable)
+        .where(eq(mathChatMessageTable.mathChatId, chatId))
+        .orderBy(asc(mathChatMessageTable.createdAt));
+
+      const assistantMessageIndex = chatMessages.findIndex(
+        (message) => message.messageId === messageId
+      );
+
+      const previousUserMessage =
+        assistantMessageIndex > 0
+          ? [...chatMessages.slice(0, assistantMessageIndex)]
+              .reverse()
+              .find((message) => message.role === 'user')
+          : undefined;
+
+      const queryFromRequest =
+        typeof req.body?.query === 'string' ? req.body.query.trim() : '';
+
+      const searchQuery =
+        queryFromRequest.length > 0
+          ? queryFromRequest
+          : previousUserMessage?.content?.trim().slice(0, 260) ||
+            targetMessage.content.trim().slice(0, 260);
+
+      if (!searchQuery) {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, {}, 'Could not determine search query'));
+      }
+
+      const webSources = await generateExternalResourcesWithGemini(
+        searchQuery,
+        previousUserMessage?.content || 'No previous user question available.',
+        targetMessage.content
+      );
+
+      const summary = await summarizeSearchResults(
+        previousUserMessage?.content || 'No previous user question available.',
+        targetMessage.content,
+        searchQuery,
+        webSources
+      );
+
+      const [savedSearch] = await db
+        .insert(mathMessageWebSearchTable)
+        .values({
+          searchId: nanoid(),
+          messageId,
+          mathChatId: chatId,
+          userId,
+          searchQuery,
+          summary,
+          sources: webSources as PersistedWebSearchSource[],
+        })
+        .returning();
+
+      return res.status(201).json(
+        new ApiResponse(
+          201,
+          {
+            searchId: savedSearch.searchId,
+            messageId,
+            mathChatId: chatId,
+            searchQuery: savedSearch.searchQuery,
+            summary: savedSearch.summary,
+            sources: savedSearch.sources,
+            createdAt: savedSearch.createdAt,
+            cached: false,
+          },
+          'Web search generated successfully'
+        )
+      );
+    } catch (error) {
+      console.error('Error running message web search:', error);
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, 'Failed to run web search for message'));
+    }
+  }
+);
+
+/**
+ * Get latest web search result for an assistant message
+ * @route GET /api/math-chats/:chatId/messages/:messageId/web-search
+ */
+export const getMathMessageWebSearch = asyncHandler(
+  async (req: Request & { user?: any }, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const chatId = Array.isArray(req.params.chatId)
+        ? req.params.chatId[0]
+        : req.params.chatId;
+      const messageId = Array.isArray(req.params.messageId)
+        ? req.params.messageId[0]
+        : req.params.messageId;
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json(new ApiResponse(401, {}, 'User not authenticated'));
+      }
+
+      const [chat] = await db
+        .select()
+        .from(mathChatTable)
+        .where(
+          and(
+            eq(mathChatTable.mathChatId, chatId),
+            eq(mathChatTable.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!chat) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'Math chat not found'));
+      }
+
+      const [existingSearch] = await db
+        .select()
+        .from(mathMessageWebSearchTable)
+        .where(
+          and(
+            eq(mathMessageWebSearchTable.mathChatId, chatId),
+            eq(mathMessageWebSearchTable.messageId, messageId)
+          )
+        )
+        .orderBy(desc(mathMessageWebSearchTable.createdAt))
+        .limit(1);
+
+      if (!existingSearch) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, 'No web search result found for this message'));
+      }
+
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            searchId: existingSearch.searchId,
+            messageId,
+            mathChatId: chatId,
+            searchQuery: existingSearch.searchQuery,
+            summary: existingSearch.summary,
+            sources: existingSearch.sources,
+            createdAt: existingSearch.createdAt,
+            cached: true,
+          },
+          'Web search result retrieved successfully'
+        )
+      );
+    } catch (error) {
+      console.error('Error fetching message web search:', error);
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, 'Failed to fetch web search result'));
+    }
+  }
+);
+
+/**
  * Stream AI response for a math problem
  * @route POST /api/math-chats/:chatId/stream
  */
@@ -433,18 +977,6 @@ export const streamMathAIResponse = asyncHandler(
         .where(eq(mathChatMessageTable.mathChatId, chatId))
         .orderBy(mathChatMessageTable.createdAt)
         .limit(10); // Last 10 messages for context
-
-      // Save user message first
-      const userMsg = {
-        messageId: nanoid(),
-        mathChatId: chatId,
-        role: 'user' as const,
-        content: userMessage,
-        attachments: imageFile ? { imageFile } : null,
-        metadata: null,
-      };
-
-      await db.insert(mathChatMessageTable).values(userMsg);
 
       // Set up SSE
       res.setHeader('Content-Type', 'text/event-stream');

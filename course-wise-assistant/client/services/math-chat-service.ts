@@ -52,6 +52,33 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
+export interface DeleteMathMessagePairResponse {
+  deletedMessageIds: string[];
+}
+
+export interface MathMessageWebSearchSource {
+  title: string;
+  link: string;
+  displayLink: string;
+  snippet: string;
+}
+
+export interface MathMessageWebSearchResult {
+  searchId: string;
+  messageId: string;
+  mathChatId: string;
+  searchQuery: string;
+  summary: string;
+  sources: MathMessageWebSearchSource[];
+  createdAt: string;
+  cached: boolean;
+}
+
+export interface RunMathMessageWebSearchDTO {
+  query?: string;
+  forceRefresh?: boolean;
+}
+
 // Create a new math chat
 export const createMathChat = async (data: CreateMathChatDTO): Promise<MathChat> => {
   const response = await Axios.post<ApiResponse<MathChat>>('/api/math-chats', data);
@@ -96,6 +123,39 @@ export const addMathMessage = async (
 ): Promise<MathChatMessage> => {
   const response = await Axios.post<ApiResponse<MathChatMessage>>(
     `/api/math-chats/${chatId}/messages`,
+    data
+  );
+  return response.data.data;
+};
+
+// Delete selected message and its related pair message
+export const deleteMathMessagePair = async (
+  chatId: string,
+  messageId: string
+): Promise<DeleteMathMessagePairResponse> => {
+  const response = await Axios.delete<ApiResponse<DeleteMathMessagePairResponse>>(
+    `/api/math-chats/${chatId}/messages/${messageId}`
+  );
+  return response.data.data;
+};
+
+export const getMathMessageWebSearch = async (
+  chatId: string,
+  messageId: string
+): Promise<MathMessageWebSearchResult> => {
+  const response = await Axios.get<ApiResponse<MathMessageWebSearchResult>>(
+    `/api/math-chats/${chatId}/messages/${messageId}/web-search`
+  );
+  return response.data.data;
+};
+
+export const runMathMessageWebSearch = async (
+  chatId: string,
+  messageId: string,
+  data: RunMathMessageWebSearchDTO = {}
+): Promise<MathMessageWebSearchResult> => {
+  const response = await Axios.post<ApiResponse<MathMessageWebSearchResult>>(
+    `/api/math-chats/${chatId}/messages/${messageId}/web-search`,
     data
   );
   return response.data.data;

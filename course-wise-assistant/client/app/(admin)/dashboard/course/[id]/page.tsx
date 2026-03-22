@@ -5,12 +5,10 @@ import { CourseChatInterface } from "@/components/course/course-chat-interface"
 import { StudyPathRecommendations } from "@/components/learning/study-path-recommendations"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { SyllabusTracker } from "@/components/course/syllabus-tracker"
-import { PracticeCenter } from "@/components/learning/practice-center"
+import { ExamPatternSelector } from "@/components/learning/exam-pattern-selector"
 import { GroupStudy } from "@/components/social/group-study"
-import { PerformanceAnalytics } from "@/components/analytics/performance-analytics"
 import { PYQAnalysis } from "@/components/learning/pyq-analysis"
 import { BookLibrary } from "@/components/learning/book-library"
-import { BanglaVoiceAssistant } from "@/components/ai-assistants/bangla-voice-assistant"
 import { SubscriptionModal } from "@/components/modals/subscription-modal"
 import { GamificationProfile } from "@/components/analytics/gamification-profile"
 import { TopicList } from "@/components/course/topic-list"
@@ -182,11 +180,10 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
               <TabsContent value="overview" className="h-full m-0 p-4 sm:p-6 space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                    <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-                      <SyllabusTracker termId={selectedTerm} />
+                     <SyllabusTracker courseId={currentCourse.courseId} termId={selectedTerm} />
                    </div>
                    <div className="space-y-4 sm:space-y-6">
-                      <GamificationProfile />
-                      <BanglaVoiceAssistant />
+                     <GamificationProfile courseId={currentCourse.courseId} />
                    </div>
                 </div>
               </TabsContent>
@@ -206,18 +203,11 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
               </TabsContent>
 
               <TabsContent value="practice" className="h-full m-0 p-4 sm:p-6 space-y-6 sm:space-y-8">
-                <PracticeCenter termId={selectedTerm} />
-                <Separator />
-                <div className="pt-4">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" /> Performance Analytics
-                  </h3>
-                  <PerformanceAnalytics />
-                </div>
+                <ExamPatternSelector courseId={currentCourse.courseId} />
               </TabsContent>
 
               <TabsContent value="pyq" className="h-full m-0 p-4 sm:p-6">
-                <PYQAnalysis />
+                <PYQAnalysis courseId={currentCourse.courseId} />
               </TabsContent>
 
               <TabsContent value="library" className="h-full m-0 p-4 sm:p-6">
@@ -234,12 +224,6 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
                   courseName={currentCourse.name}
                   examDate={undefined}
                 />
-              </TabsContent>
-
-              <TabsContent value="voice" className="h-full m-0 p-4 sm:p-6">
-                 <div className="max-w-2xl mx-auto mt-10">
-                    <BanglaVoiceAssistant />
-                 </div>
               </TabsContent>
             </div>
           </Tabs>

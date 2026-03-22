@@ -6,6 +6,9 @@ import {
   updateMathChat,
   deleteMathChat,
   addMathChatMessage,
+  deleteMathChatMessagePair,
+  runMathMessageWebSearch,
+  getMathMessageWebSearch,
   streamMathAIResponse,
   translateToBangla,
   banglaTextToSpeech,
@@ -40,6 +43,13 @@ math_chat_router
 // Math chat message operations
 math_chat_router.route('/:chatId/messages')
   .post(addMathChatMessage); // Add message manually
+
+math_chat_router.route('/:chatId/messages/:messageId')
+  .delete(deleteMathChatMessagePair); // Delete selected message and its related pair
+
+math_chat_router.route('/:chatId/messages/:messageId/web-search')
+  .get(getMathMessageWebSearch) // Get latest saved web search for a message
+  .post(runMathMessageWebSearch); // Run and persist web search for a message
 
 // AI math response route (streaming with step-by-step solutions)
 math_chat_router.route('/:chatId/stream')

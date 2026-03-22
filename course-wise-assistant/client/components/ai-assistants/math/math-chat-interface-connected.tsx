@@ -1,22 +1,105 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Bot, User, Loader2, MessageSquarePlus, Upload, X, Languages, Volume2, VolumeX } from "lucide-react"
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  MessageSquarePlus,
+  Upload,
+  X,
+  Languages,
+  Volume2,
+  VolumeX,
+  Trash2,
+  Globe2,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { MathChatSidebar } from "@/components/ai-assistants/math/math-chat-sidebar"
 import { MathSymbolPicker } from "@/components/ai-assistants/math/math-symbol-picker"
+import { MermaidRenderer } from "@/components/ai-assistants/math/mermaid-renderer"
 import { useMathChatStore } from "@/store/math-chat-store"
-import { streamMathAIResponse, translateContentToBangla, generateBanglaSpeech } from "@/services/math-chat-service"
+import type {
+  MathChatMessage,
+  MathMessageWebSearchResult,
+} from "@/services/math-chat-service"
+import {
+  streamMathAIResponse,
+  translateContentToBangla,
+  generateBanglaSpeech,
+  runMathMessageWebSearch,
+} from "@/services/math-chat-service"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import "katex/dist/katex.min.css"
 import { toast } from "sonner"
+
+interface ParsedContentPart {
+  type: "markdown" | "mermaid"
+  content: string
+}
+
+interface MessageWebSearchState {
+  isOpen: boolean
+  isLoading: boolean
+  error: string | null
+  data: MathMessageWebSearchResult | null
+}
+
+const parseMermaidContentParts = (text: string): ParsedContentPart[] => {
+  const parts: ParsedContentPart[] = []
+  const mermaidFenceRegex = /```[ \t]*mermaid[ \t]*\r?\n([\s\S]*?)```/gi
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = mermaidFenceRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({
+        type: "markdown",
+        content: text.slice(lastIndex, match.index),
+      })
+    }
+
+    parts.push({
+      type: "mermaid",
+      content: match[1].trim(),
+    })
+
+    lastIndex = match.index + match[0].length
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({
+      type: "markdown",
+      content: text.slice(lastIndex),
+    })
+  }
+
+  if (parts.length === 0) {
+    return [{ type: "markdown", content: text }]
+  }
+
+  return parts
+}
 
 export function MathChatInterface() {
   const {
@@ -27,6 +110,7 @@ export function MathChatInterface() {
     fetchChatById,
     createChat,
     addMessage,
+    deleteMessagePair,
   } = useMathChatStore()
 
   const [input, setInput] = useState("")
@@ -37,6 +121,9 @@ export function MathChatInterface() {
   const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set())
   const [speakingId, setSpeakingId] = useState<string | null>(null)
   const [generatingAudioId, setGeneratingAudioId] = useState<string | null>(null)
+  const [messageToDelete, setMessageToDelete] = useState<MathChatMessage | null>(null)
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false)
+  const [webSearchStates, setWebSearchStates] = useState<Record<string, MessageWebSearchState>>({})
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -327,6 +414,366 @@ export function MathChatInterface() {
     }
   }
 
+  const handleDeleteMessagePair = async (): Promise<void> => {
+    if (!currentChat || !messageToDelete || isDeletingMessage) {
+      return
+    }
+
+    setIsDeletingMessage(true)
+
+    try {
+      const deletedIds = await deleteMessagePair(currentChat.mathChatId, messageToDelete.messageId)
+
+      if (deletedIds.length > 0) {
+        toast.success("Message and related response deleted permanently")
+      } else {
+        toast.error("Failed to delete message pair")
+      }
+    } catch (error) {
+      console.error("Delete message pair error:", error)
+      toast.error("Failed to delete message pair")
+    } finally {
+      setIsDeletingMessage(false)
+      setMessageToDelete(null)
+    }
+  }
+
+  const handleWebSearchForMessage = async (
+    message: MathChatMessage,
+    options?: { forceRefresh?: boolean }
+  ): Promise<void> => {
+    if (!currentChat || message.role !== "assistant") {
+      return
+    }
+
+    const existingState = webSearchStates[message.messageId]
+
+    if (existingState?.data && !options?.forceRefresh && !existingState.isOpen) {
+      setWebSearchStates((prev) => ({
+        ...prev,
+        [message.messageId]: {
+          ...existingState,
+          isOpen: true,
+          error: null,
+        },
+      }))
+      return
+    }
+
+    if (existingState?.data && !options?.forceRefresh && existingState.isOpen) {
+      setWebSearchStates((prev) => ({
+        ...prev,
+        [message.messageId]: {
+          ...existingState,
+          isOpen: false,
+        },
+      }))
+      return
+    }
+
+    setWebSearchStates((prev) => ({
+      ...prev,
+      [message.messageId]: {
+        isOpen: true,
+        isLoading: true,
+        error: null,
+        data: prev[message.messageId]?.data ?? null,
+      },
+    }))
+
+    try {
+      const searchResult = await runMathMessageWebSearch(
+        currentChat.mathChatId,
+        message.messageId,
+        {
+          forceRefresh: Boolean(options?.forceRefresh),
+        }
+      )
+
+      setWebSearchStates((prev) => ({
+        ...prev,
+        [message.messageId]: {
+          isOpen: true,
+          isLoading: false,
+          error: null,
+          data: searchResult,
+        },
+      }))
+
+      toast.success(
+        searchResult.cached
+          ? "Loaded saved web search result"
+          : "Web search completed"
+      )
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to run web search"
+
+      setWebSearchStates((prev) => ({
+        ...prev,
+        [message.messageId]: {
+          isOpen: true,
+          isLoading: false,
+          error: errorMessage,
+          data: prev[message.messageId]?.data ?? null,
+        },
+      }))
+
+      toast.error("Failed to run web search")
+    }
+  }
+
+  const renderWebSearchPanel = (message: MathChatMessage): React.ReactNode => {
+    const state = webSearchStates[message.messageId]
+
+    if (!state?.isOpen) {
+      return null
+    }
+
+    return (
+      <div className="mt-4 rounded-xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-cyan-50 p-4 shadow-sm dark:border-emerald-900/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-cyan-950/40">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="rounded-md bg-emerald-100 p-1.5 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+              <Globe2 className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                AI Web Research
+              </p>
+              {state.data?.searchQuery && (
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Query: {state.data.searchQuery}
+                </p>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleWebSearchForMessage(message, { forceRefresh: true })}
+            disabled={state.isLoading}
+            className="h-7 border-emerald-200 bg-white/80 px-2 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/70 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
+          >
+            {state.isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+
+        {state.isLoading && (
+          <div className="rounded-lg border border-dashed border-emerald-300 bg-white/80 p-3 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-slate-900/60 dark:text-emerald-300">
+            Searching Google and curating relevant resources...
+          </div>
+        )}
+
+        {!state.isLoading && state.error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+            {state.error}
+          </div>
+        )}
+
+        {!state.isLoading && !state.error && state.data && (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-100 bg-white/90 p-3 text-sm leading-relaxed dark:border-emerald-900/60 dark:bg-slate-900/70">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={markdownComponents}
+              >
+                {state.data.summary}
+              </ReactMarkdown>
+            </div>
+
+            <div className="grid gap-2">
+              {state.data.sources.map((source, index) => (
+                <a
+                  key={`${source.link}-${index}`}
+                  href={source.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group rounded-lg border border-slate-200 bg-white/90 p-3 transition-all hover:border-emerald-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-emerald-800"
+                >
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {source.title}
+                    </p>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-500 transition-colors group-hover:text-emerald-600 dark:text-slate-400 dark:group-hover:text-emerald-300" />
+                  </div>
+                  <p className="mb-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    {source.displayLink}
+                  </p>
+                  <p className="line-clamp-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    {source.snippet}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const markdownComponents = {
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className="text-2xl font-bold bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 mt-6 pb-3 border-b-2 border-purple-300 dark:border-purple-700">
+        {children}
+      </h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3 mt-5 pb-2 border-b border-slate-300 dark:border-slate-600">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-2 mt-4">
+        {children}
+      </h3>
+    ),
+    h4: ({ children }: { children?: React.ReactNode }) => (
+      <h4 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-2 mt-3">
+        {children}
+      </h4>
+    ),
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <p className="text-base text-slate-700 dark:text-slate-300 mb-4 leading-relaxed whitespace-pre-wrap">
+        {children}
+      </p>
+    ),
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="space-y-2 mb-5 ml-6 list-disc">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }: { children?: React.ReactNode }) => (
+      <ol className="space-y-3 mb-5 ml-6 list-decimal">
+        {children}
+      </ol>
+    ),
+    li: ({ children }: { children?: React.ReactNode }) => (
+      <li className="text-base text-slate-700 dark:text-slate-300 leading-relaxed marker:text-purple-600 dark:marker:text-purple-400 marker:font-bold pl-2">
+        {children}
+      </li>
+    ),
+    code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+      const isInline = !className
+      return isInline ? (
+        <code className="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-mono text-[13px] border border-purple-200 dark:border-purple-800">
+          {children}
+        </code>
+      ) : (
+        <code className={`${className} text-sm`}>
+          {children}
+        </code>
+      )
+    },
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <pre className="bg-linear-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-slate-100 rounded-xl p-4 mb-4 overflow-x-auto border border-slate-700 shadow-lg whitespace-pre font-mono text-sm leading-6">
+        {children}
+      </pre>
+    ),
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
+      <blockquote className="border-l-4 border-purple-500 dark:border-purple-400 pl-5 py-3 my-4 bg-linear-to-r from-purple-50 via-purple-50 to-blue-50 dark:from-purple-950/30 dark:via-purple-950/30 dark:to-blue-950/30 text-slate-700 dark:text-slate-300 rounded-r-lg shadow-sm">
+        <div className="flex items-start gap-2">
+          <span className="text-purple-500 dark:text-purple-400 text-xl font-bold">💡</span>
+          <div className="flex-1">{children}</div>
+        </div>
+      </blockquote>
+    ),
+    table: ({ children }: { children?: React.ReactNode }) => (
+      <div className="overflow-x-auto mb-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }: { children?: React.ReactNode }) => (
+      <thead className="bg-linear-to-r from-purple-50 to-blue-50 dark:from-purple-950/50 dark:to-blue-950/50">
+        {children}
+      </thead>
+    ),
+    tbody: ({ children }: { children?: React.ReactNode }) => (
+      <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+        {children}
+      </tbody>
+    ),
+    tr: ({ children }: { children?: React.ReactNode }) => (
+      <tr className="hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-colors">
+        {children}
+      </tr>
+    ),
+    th: ({ children }: { children?: React.ReactNode }) => (
+      <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+        {children}
+      </th>
+    ),
+    td: ({ children }: { children?: React.ReactNode }) => (
+      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+        {children}
+      </td>
+    ),
+    strong: ({ children }: { children?: React.ReactNode }) => (
+      <strong className="font-bold text-purple-700 dark:text-purple-300">
+        {children}
+      </strong>
+    ),
+    em: ({ children }: { children?: React.ReactNode }) => (
+      <em className="italic text-slate-700 dark:text-slate-300">
+        {children}
+      </em>
+    ),
+  }
+
+  const renderAssistantContent = (content: string) => {
+    const parts = parseMermaidContentParts(content)
+
+    return (
+      <div className="space-y-2">
+        {parts.map((part, index) => {
+          if (part.type === "mermaid") {
+            if (!part.content.trim()) {
+              return (
+                <pre
+                  key={`mermaid-empty-${index}`}
+                  className="bg-linear-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-slate-100 rounded-xl p-4 mb-4 overflow-x-auto border border-slate-700 shadow-lg whitespace-pre font-mono text-sm leading-6"
+                >
+                  <code>{"Mermaid block was empty. Showing fallback text."}</code>
+                </pre>
+              )
+            }
+
+            return (
+              <MermaidRenderer
+                key={`mermaid-${index}`}
+                chart={part.content}
+                className="my-2 overflow-x-auto rounded-xl border border-slate-300 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-950/80"
+              />
+            )
+          }
+
+          if (!part.content.trim()) {
+            return null
+          }
+
+          return (
+            <div key={`markdown-${index}`} className="prose prose-slate dark:prose-invert max-w-none prose-sm">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={markdownComponents}
+              >
+                {part.content}
+              </ReactMarkdown>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full bg-linear-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-950 dark:via-slate-900 dark:to-purple-950">
       {/* Chat Sidebar */}
@@ -380,131 +827,29 @@ export function MathChatInterface() {
                               </Badge>
                             )}
                           </>
-                        ) : (
-                          <div className="prose prose-slate dark:prose-invert max-w-none prose-sm">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm, remarkMath]}
-                              rehypePlugins={[rehypeKatex]}
-                              components={{
-                                h1: ({ children }) => (
-                                  <h1 className="text-2xl font-bold bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 mt-6 pb-3 border-b-2 border-purple-300 dark:border-purple-700">
-                                    {children}
-                                  </h1>
-                                ),
-                                h2: ({ children }) => (
-                                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3 mt-5 pb-2 border-b border-slate-300 dark:border-slate-600">
-                                    {children}
-                                  </h2>
-                                ),
-                                h3: ({ children }) => (
-                                  <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300 mb-2 mt-4">
-                                    {children}
-                                  </h3>
-                                ),
-                                h4: ({ children }) => (
-                                  <h4 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-2 mt-3">
-                                    {children}
-                                  </h4>
-                                ),
-                                p: ({ children }) => (
-                                  <p className="text-base text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
-                                    {children}
-                                  </p>
-                                ),
-                                ul: ({ children }) => (
-                                  <ul className="space-y-2 mb-5 ml-6 list-disc">
-                                    {children}
-                                  </ul>
-                                ),
-                                ol: ({ children }) => (
-                                  <ol className="space-y-3 mb-5 ml-6 list-decimal">
-                                    {children}
-                                  </ol>
-                                ),
-                                li: ({ children }) => (
-                                  <li className="text-base text-slate-700 dark:text-slate-300 leading-relaxed marker:text-purple-600 dark:marker:text-purple-400 marker:font-bold pl-2">
-                                    {children}
-                                  </li>
-                                ),
-                                code: ({ children, className }) => {
-                                  const isInline = !className
-                                  return isInline ? (
-                                    <code className="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-mono text-[13px] border border-purple-200 dark:border-purple-800">
-                                      {children}
-                                    </code>
-                                  ) : (
-                                    <code className={`${className} text-sm`}>
-                                    {children}
-                                    </code>
-                                  )
-                                },
-                                pre: ({ children }) => (
-                                  <pre className="bg-linear-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-slate-100 rounded-xl p-4 mb-4 overflow-x-auto border border-slate-700 shadow-lg">
-                                    {children}
-                                  </pre>
-                                ),
-                                blockquote: ({ children }) => (
-                                  <blockquote className="border-l-4 border-purple-500 dark:border-purple-400 pl-5 py-3 my-4 bg-linear-to-r from-purple-50 via-purple-50 to-blue-50 dark:from-purple-950/30 dark:via-purple-950/30 dark:to-blue-950/30 text-slate-700 dark:text-slate-300 rounded-r-lg shadow-sm">
-                                    <div className="flex items-start gap-2">
-                                      <span className="text-purple-500 dark:text-purple-400 text-xl font-bold">💡</span>
-                                      <div className="flex-1">{children}</div>
-                                    </div>
-                                  </blockquote>
-                                ),
-                                table: ({ children }) => (
-                                  <div className="overflow-x-auto mb-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md">
-                                    <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                      {children}
-                                    </table>
-                                  </div>
-                                ),
-                                thead: ({ children }) => (
-                                  <thead className="bg-linear-to-r from-purple-50 to-blue-50 dark:from-purple-950/50 dark:to-blue-950/50">
-                                    {children}
-                                  </thead>
-                                ),
-                                tbody: ({ children }) => (
-                                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                                    {children}
-                                  </tbody>
-                                ),
-                                tr: ({ children }) => (
-                                  <tr className="hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-colors">
-                                    {children}
-                                  </tr>
-                                ),
-                                th: ({ children }) => (
-                                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    {children}
-                                  </th>
-                                ),
-                                td: ({ children }) => (
-                                  <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                                    {children}
-                                  </td>
-                                ),
-                                strong: ({ children }) => (
-                                  <strong className="font-bold text-purple-700 dark:text-purple-300">
-                                    {children}
-                                  </strong>
-                                ),
-                                em: ({ children }) => (
-                                  <em className="italic text-slate-700 dark:text-slate-300">
-                                    {children}
-                                  </em>
-                                ),
-                              }}
-                            >
-                              {translations[message.messageId] || message.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
+                        ) : renderAssistantContent(translations[message.messageId] || message.content)}
                         <div className="flex items-center justify-between mt-3 gap-2">
                           <p className="text-xs opacity-60 font-medium">
                             {new Date(message.createdAt).toLocaleTimeString()}
                           </p>
                           {message.role === "assistant" && (
                             <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleWebSearchForMessage(message)}
+                                disabled={Boolean(webSearchStates[message.messageId]?.isLoading)}
+                                className="h-7 px-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
+                              >
+                                {webSearchStates[message.messageId]?.isLoading ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Globe2 className={`h-3.5 w-3.5 ${webSearchStates[message.messageId]?.isOpen ? 'text-emerald-600 dark:text-emerald-400' : ''}`} />
+                                )}
+                                <span className="ml-1.5 text-xs font-medium">
+                                  {webSearchStates[message.messageId]?.data ? "Research" : "Search"}
+                                </span>
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -545,9 +890,30 @@ export function MathChatInterface() {
                                   )}
                                 </Button>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setMessageToDelete(message)}
+                                className="h-7 px-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400"
+                                title="Delete message pair"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           )}
+                          {message.role === "user" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMessageToDelete(message)}
+                              className="h-7 px-2 hover:bg-red-100/60 dark:hover:bg-red-900/30 text-red-100 hover:text-red-200"
+                              title="Delete message pair"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
+                        {message.role === "assistant" && renderWebSearchPanel(message)}
                       </div>
                     </div>
                     {message.role === "user" && (
@@ -570,14 +936,7 @@ export function MathChatInterface() {
                     </Avatar>
                     <div className="flex flex-col gap-2 max-w-[80%]">
                       <div className="rounded-2xl px-5 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md">
-                        <div className="prose prose-slate dark:prose-invert max-w-none prose-sm">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                          >
-                            {streamingContent}
-                          </ReactMarkdown>
-                        </div>
+                        {renderAssistantContent(streamingContent)}
                         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
                           <Loader2 className="h-4 w-4 animate-spin text-purple-600 dark:text-purple-400" />
                           <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
@@ -720,6 +1079,34 @@ export function MathChatInterface() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={Boolean(messageToDelete)} onOpenChange={(open) => {
+        if (!open && !isDeletingMessage) {
+          setMessageToDelete(null)
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message Pair</AlertDialogTitle>
+            <AlertDialogDescription>
+              By deleting this message, the related user/AI message pair will be deleted forever and cannot be recovered.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingMessage}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeletingMessage}
+              onClick={(event) => {
+                event.preventDefault()
+                handleDeleteMessagePair()
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeletingMessage ? "Deleting..." : "Delete Forever"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

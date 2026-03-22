@@ -189,3 +189,43 @@
 .katex-display::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.5);
 }
+
+/* Mermaid diagram rendering stability */
+.mermaid {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.mermaid svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid .label,
+.mermaid text,
+.mermaid span {
+  color: inherit;
+}
+
+.mermaid .nodeLabel,
+.mermaid .edgeLabel {
+  line-height: 1.35 !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+.mermaid foreignObject {
+  overflow: visible !important;
+}
+
+.mermaid .nodeLabel p,
+.mermaid .edgeLabel p {
+  margin: 0 !important;
+  line-height: 1.35 !important;
+}

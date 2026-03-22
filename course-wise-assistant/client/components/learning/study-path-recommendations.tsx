@@ -1,22 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Target, TrendingUp, CheckCircle2, Circle, Sparkles } from "lucide-react"
+import { Calendar, Target, TrendingUp, CheckCircle2, Circle, Sparkles, RefreshCw, Clock3, AlertTriangle } from "lucide-react"
 import { format } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-
-interface StudyTask {
-  id: string
-  title: string
-  description: string
-  priority: "high" | "medium" | "low"
-  dueDate: string
-  completed: boolean
-  estimatedTime: string
-}
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  getLatestStudyPath,
+  regenerateStudyPath,
+  type StudyPath,
+  type StudyPathTask,
+} from "@/services/study-path-service"
 
 interface StudyPathRecommendationsProps {
   courseId: string
@@ -29,64 +26,64 @@ export function StudyPathRecommendations({
   courseName,
   examDate,
 }: StudyPathRecommendationsProps) {
-  const [tasks, setTasks] = useState<StudyTask[]>([
-    {
-      id: "1",
-      title: "Review Chapter 1-3",
-      description: "Focus on fundamental concepts and key definitions",
-      priority: "high",
-      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-      completed: false,
-      estimatedTime: "2 hours",
-    },
-    {
-      id: "2",
-      title: "Practice Problem Set 1",
-      description: "Complete 20 practice problems to reinforce learning",
-      priority: "high",
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      completed: false,
-      estimatedTime: "1.5 hours",
-    },
-    {
-      id: "3",
-      title: "Watch Lecture Videos 4-6",
-      description: "Advanced topics and case studies",
-      priority: "medium",
-      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-      completed: false,
-      estimatedTime: "3 hours",
-    },
-    {
-      id: "4",
-      title: "Create Summary Notes",
-      description: "Consolidate key concepts from all chapters",
-      priority: "medium",
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      completed: false,
-      estimatedTime: "2 hours",
-    },
-    {
-      id: "5",
-      title: "Take Practice Exam",
-      description: "Full-length mock exam under timed conditions",
-      priority: "low",
-      dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-      completed: false,
-      estimatedTime: "2.5 hours",
-    },
-  ])
+  const [studyPath, setStudyPath] = useState<StudyPath | null>(null)
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const toggleTask = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    )
+  const tasks = studyPath?.tasks ?? []
+
+  const fetchStudyPath = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const path = await getLatestStudyPath(courseId, examDate)
+      setStudyPath(path)
+      setCompletedTaskIds(new Set())
+    } catch (fetchError) {
+      console.error(fetchError)
+      setError("Failed to load study path. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const completedCount = tasks.filter((task) => task.completed).length
-  const progress = (completedCount / tasks.length) * 100
+  useEffect(() => {
+    void fetchStudyPath()
+  }, [courseId, examDate])
+
+  const handleRegenerate = async () => {
+    setIsRegenerating(true)
+    setError(null)
+
+    try {
+      const regeneratedPath = await regenerateStudyPath(courseId, examDate)
+      setStudyPath(regeneratedPath)
+      setCompletedTaskIds(new Set())
+    } catch (regenerateError) {
+      console.error(regenerateError)
+      setError("Failed to regenerate study path. Please try again.")
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const toggleTask = (taskId: string) => {
+    setCompletedTaskIds((previousIds) => {
+      const nextIds = new Set(previousIds)
+      if (nextIds.has(taskId)) {
+        nextIds.delete(taskId)
+      } else {
+        nextIds.add(taskId)
+      }
+      return nextIds
+    })
+  }
+
+  const completedCount = tasks.filter((task) => completedTaskIds.has(task.id)).length
+  const progress = tasks.length === 0 ? 0 : (completedCount / tasks.length) * 100
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -101,33 +98,99 @@ export function StudyPathRecommendations({
     }
   }
 
-  const daysUntilExam = examDate
-    ? Math.ceil((new Date(examDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const resolvedExamDate = studyPath?.examDate ?? examDate
+  const daysUntilExam = resolvedExamDate
+    ? Math.ceil((new Date(resolvedExamDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null
+
+  const getInsightIcon = (type: string) => {
+    if (type === "focus") {
+      return <Target className="h-4 w-4 text-blue-500" />
+    }
+    if (type === "pace") {
+      return <Calendar className="h-4 w-4 text-green-500" />
+    }
+    return <Sparkles className="h-4 w-4 text-amber-500" />
+  }
+
+  const getInsightBg = (type: string) => {
+    if (type === "focus") return "bg-blue-500/10"
+    if (type === "pace") return "bg-green-500/10"
+    return "bg-amber-500/10"
+  }
+
+  const isBusy = isLoading || isRegenerating
+
+  if (isLoading && !studyPath) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="space-y-3">
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-2 w-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="overflow-hidden border-none bg-linear-to-br from-cyan-500/10 via-sky-500/5 to-background shadow-sm">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Personalized Study Path
+                {studyPath?.title ?? "Personalized Study Path"}
               </CardTitle>
               <CardDescription>
                 AI-generated recommendations based on your learning needs and exam timeline
               </CardDescription>
             </div>
-            {daysUntilExam !== null && (
-              <Badge variant="outline" className="gap-1">
-                <Calendar className="h-3 w-3" />
-                {daysUntilExam} days until exam
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {daysUntilExam !== null && (
+                <Badge variant="outline" className="gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {daysUntilExam} days until exam
+                </Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? "animate-spin" : ""}`} />
+                Re-generate
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {studyPath?.summary && (
+            <div className="rounded-lg border border-border/60 bg-background/70 p-3 text-sm text-muted-foreground">
+              {studyPath.summary}
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">Overall Progress</span>
@@ -139,19 +202,23 @@ export function StudyPathRecommendations({
           </div>
 
           <div className="grid gap-3 mt-6">
-            {tasks.map((task) => (
+            {tasks.map((task: StudyPathTask) => {
+              const isCompleted = completedTaskIds.has(task.id)
+
+              return (
               <div
                 key={task.id}
                 className={`border rounded-lg p-4 transition-all ${
-                  task.completed ? "bg-muted/50" : "hover:shadow-md"
+                  isCompleted ? "bg-muted/50" : "hover:shadow-md"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() => toggleTask(task.id)}
-                    className="mt-1 flex-shrink-0"
+                    disabled={isBusy}
+                    className="mt-1 shrink-0"
                   >
-                    {task.completed ? (
+                    {isCompleted ? (
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                     ) : (
                       <Circle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
@@ -161,12 +228,12 @@ export function StudyPathRecommendations({
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h4
                         className={`font-medium ${
-                          task.completed ? "line-through text-muted-foreground" : ""
+                          isCompleted ? "line-through text-muted-foreground" : ""
                         }`}
                       >
                         {task.title}
                       </h4>
-                      <Badge variant={getPriorityColor(task.priority)} className="flex-shrink-0">
+                      <Badge variant={getPriorityColor(task.priority)} className="shrink-0">
                         {task.priority}
                       </Badge>
                     </div>
@@ -179,15 +246,27 @@ export function StudyPathRecommendations({
                         {format(new Date(task.dueDate), "MMM d, yyyy")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Target className="h-3 w-3" />
+                        <Clock3 className="h-3 w-3" />
                         {task.estimatedTime}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
+
+            {!isLoading && tasks.length === 0 && (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                No tasks available yet. Click Re-generate to create a fresh study path for {courseName}.
+              </div>
+            )}
           </div>
+
+          {studyPath?.generatedAt && (
+            <p className="text-xs text-muted-foreground">
+              Last generated: {format(new Date(studyPath.generatedAt), "MMM d, yyyy 'at' h:mm a")}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -199,39 +278,21 @@ export function StudyPathRecommendations({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Target className="h-4 w-4 text-blue-500" />
+          {(studyPath?.insights ?? []).map((insight, index) => (
+            <div key={`${insight.title}-${index}`} className="flex items-start gap-3">
+              <div className={`rounded-lg p-2 ${getInsightBg(insight.type)}`}>
+                {getInsightIcon(insight.type)}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{insight.title}</p>
+                <p className="text-sm text-muted-foreground">{insight.description}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">Focus Area</p>
-              <p className="text-sm text-muted-foreground">
-                Based on your uploaded materials, prioritize fundamental concepts first
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <Calendar className="h-4 w-4 text-green-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Recommended Pace</p>
-              <p className="text-sm text-muted-foreground">
-                Complete 2-3 tasks per week to stay on track for your exam
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-lg">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">AI Suggestion</p>
-              <p className="text-sm text-muted-foreground">
-                Schedule regular practice sessions to reinforce learned concepts
-              </p>
-            </div>
-          </div>
+          ))}
+
+          {!isLoading && (studyPath?.insights ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No insights available yet. Re-generate to refresh recommendations.</p>
+          )}
         </CardContent>
       </Card>
     </div>
