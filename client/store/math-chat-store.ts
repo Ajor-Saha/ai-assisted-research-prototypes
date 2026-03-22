@@ -9,6 +9,7 @@ import {
   updateMathChat,
   deleteMathChat,
   addMathMessage,
+  deleteMathMessagePair,
   CreateMathChatDTO,
   UpdateMathChatDTO,
   AddMathMessageDTO,
@@ -29,6 +30,7 @@ interface MathChatStore {
   updateChat: (chatId: string, data: UpdateMathChatDTO) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   addMessage: (chatId: string, data: AddMathMessageDTO) => Promise<void>;
+  deleteMessagePair: (chatId: string, messageId: string) => Promise<string[]>;
   clearCurrentChat: () => void;
   setError: (error: string | null) => void;
 }
@@ -136,6 +138,40 @@ export const useMathChatStore = create<MathChatStore>((set, get) => ({
     } catch (error) {
       console.error('Error adding message:', error);
       set({ error: 'Failed to add message' });
+    }
+  },
+
+  // Delete selected message and its related pair
+  deleteMessagePair: async (chatId: string, messageId: string) => {
+    try {
+      const response = await deleteMathMessagePair(chatId, messageId);
+      const deletedMessageIds = response.deletedMessageIds;
+
+      set((state) => {
+        const filteredMessages = state.messages.filter(
+          (message) => !deletedMessageIds.includes(message.messageId)
+        );
+
+        const updatedCurrentChat = state.currentChat
+          ? {
+              ...state.currentChat,
+              messages: state.currentChat.messages.filter(
+                (message) => !deletedMessageIds.includes(message.messageId)
+              ),
+            }
+          : null;
+
+        return {
+          messages: filteredMessages,
+          currentChat: updatedCurrentChat,
+        };
+      });
+
+      return deletedMessageIds;
+    } catch (error) {
+      console.error('Error deleting message pair:', error);
+      set({ error: 'Failed to delete message pair' });
+      return [];
     }
   },
 

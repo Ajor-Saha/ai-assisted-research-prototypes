@@ -19,7 +19,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { 
   Home, 
   BookOpen, 
-  Loader2, 
   FileText, 
   Layers, 
   TrendingUp,
@@ -30,6 +29,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useCourseStore } from "@/store/course-store"
 import { getCourseTopics } from "@/services/topic-service"
 import { getCourseMaterials } from "@/services/material-service"
@@ -96,6 +96,22 @@ export default function Page() {
 
   const recentCourses = courses.slice(0, 3)
   const completionRate = courses.length > 0 ? Math.min(Math.round((totalMaterials / (courses.length * 5)) * 100), 100) : 0
+
+  const CourseCardSkeleton = () => (
+    <Card className="overflow-hidden">
+      <CardHeader className="space-y-2">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <div className="pt-2">
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
     <>
@@ -164,7 +180,7 @@ export default function Page() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalTopics}
+                {statsLoading ? <Skeleton className="h-8 w-14" /> : totalTopics}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Across all courses</p>
               <Progress value={totalTopics > 0 ? Math.min((totalTopics / 20) * 100, 100) : 0} className="mt-2 h-1" />
@@ -178,7 +194,7 @@ export default function Page() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalMaterials}
+                {statsLoading ? <Skeleton className="h-8 w-14" /> : totalMaterials}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Uploaded resources</p>
               <Progress value={totalMaterials > 0 ? Math.min((totalMaterials / 50) * 100, 100) : 0} className="mt-2 h-1" />
@@ -293,8 +309,25 @@ export default function Page() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <CourseCardSkeleton />
+              <CourseCardSkeleton />
+              <CourseCardSkeleton />
+            </div>
+            <Card className="bg-linear-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
           </div>
         )}
 

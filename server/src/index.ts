@@ -10,6 +10,11 @@ import material_router from './routes/material-route';
 import chat_router from './routes/chat-route';
 import math_chat_router from './routes/math-chat-route';
 import research_paper_router from './routes/research-paper-route';
+import exam_pattern_router from './routes/exam-pattern-route';
+import generated_exam_router from './routes/generated-exam-route';
+import exam_session_router from './routes/exam-session-route';
+import exam_result_router from './routes/exam-result-route';
+import study_path_router from './routes/study-path-route';
 
 dotenv.config();
 
@@ -40,6 +45,11 @@ app.use('/api/materials', material_router);
 app.use('/api/chats', chat_router);
 app.use('/api/math-chats', math_chat_router);
 app.use('/api/research-papers', research_paper_router);
+app.use('/api/exam-patterns', exam_pattern_router);
+app.use('/api/generated-exams', generated_exam_router);
+app.use('/api/exam-sessions', exam_session_router);
+app.use('/api/exam-results', exam_result_router);
+app.use('/api/study-paths', study_path_router);
 
 app.get('/', (req, res) => {
   res.send('Company & task server is running');

@@ -14,6 +14,7 @@ export * from './tbl-chat-message';
 // Math Assistant Chat
 export * from './tbl-math-chat';
 export * from './tbl-math-chat-message';
+export * from './tbl-math-message-web-search';
 
 // Research Assistant
 export * from './tbl-research-paper';
@@ -27,6 +28,13 @@ export * from './tbl-quiz-question';
 
 // Short Q&A
 export * from './tbl-short-qa';
+
+// AI Generated Exam System
+export * from './tbl-exam-pattern';
+export * from './tbl-generated-exam';
+export * from './tbl-exam-session';
+export * from './tbl-exam-result';
+export * from './tbl-study-path';
 
 // Relations
 export * from './relations';

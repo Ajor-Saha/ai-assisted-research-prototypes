@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, BadgeCheck, ChevronsUpDown } from "lucide-react"
+import { LogOut, BadgeCheck, ChevronsUpDown, ShieldCheck } from "lucide-react"
 
 import {
   Avatar,
@@ -77,9 +77,13 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup className="cursor-pointer">
-              <DropdownMenuItem onClick={() => router.push("/settings/account-manage")}>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings/profile")}>
                 <BadgeCheck className="mr-2" />
-                Account
+                Update Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings/security")}>
+                <ShieldCheck className="mr-2" />
+                Change Password
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
