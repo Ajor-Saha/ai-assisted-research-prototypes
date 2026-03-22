@@ -1,66 +1,82 @@
 # CourseWise Assistant
 
-An AI-powered learning platform that combines course management, interactive study tools, exam workflows, and personalized AI assistance.
+### Learn Smarter with AI-Powered Course Management
 
-CourseWise is organized as a full-stack monorepo with a modern web client and a TypeScript API server.
+An end-to-end learning platform that combines course operations, AI study assistance, exam systems, and personalized study workflows.
 
-## Project Overview
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![Express](https://img.shields.io/badge/Express-4-000000?style=for-the-badge&logo=express)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?style=for-the-badge&logo=postgresql)
 
-CourseWise helps learners and instructors:
+---
 
-- Manage courses, topics, and study materials
-- Chat with AI assistants for math, research, and text-based support
-- Create and manage exam patterns, sessions, and results
-- Build personalized study paths
-- Track learning performance and analytics
+## What Is CourseWise?
 
-## Monorepo Layout
+CourseWise is a full-stack monorepo application built for students and educators who want an AI-enhanced study ecosystem.
 
-    p-2-all-prototypes/
-    |- client/   # Next.js frontend application
-    |- server/   # Express + TypeScript backend API
-    |- AGENTS.md # Engineering conventions and project standards
+It helps you:
 
-## Architecture
+- 📚 Manage courses, topics, and learning materials
+- 🤖 Use AI assistants for math, text, and research support
+- 📝 Generate and track exam patterns, sessions, and results
+- 🧭 Build personalized study paths
+- 📈 Monitor learning analytics and performance trends
 
-### High-Level Flow
+---
 
-    Browser (Next.js App)
-         |
-         | HTTP + Cookies + Bearer Token
-         v
-    Express API Server
-         |
-         | Drizzle ORM
-         v
-    Neon PostgreSQL
+## Monorepo Structure
 
-### Frontend (client)
+```text
+p-2-all-prototypes/
+├── client/         # Next.js frontend (App Router)
+├── server/         # Express + TypeScript backend API
+├── AGENTS.md       # Team coding standards and architecture guidance
+└── README.md
+```
 
-- Framework: Next.js 16 (App Router) + React 19 + TypeScript
-- UI System: Tailwind CSS v4 + Radix UI + shadcn-style component structure
-- State Management: Zustand stores by domain
-- Forms and Validation: React Hook Form + Zod
-- HTTP Client: Axios with auth interceptors
-- Visualization and rendering: Recharts, Mermaid, KaTeX/Markdown rendering
+---
 
-Main frontend domains:
+## System Architecture
 
-- app routing: application and admin route groups
-- reusable UI: components/ui
-- domain modules: course, learning, analytics, ai-assistants
-- data contracts: schemas and typed services
+```mermaid
+flowchart LR
+  A[Next.js Client App] -->|HTTP + Cookies + Bearer Token| B[Express API Server]
+  B -->|Drizzle ORM| C[(Neon PostgreSQL)]
+  B --> D[AI Providers\nOpenAI, Google GenAI, LangChain]
+  B --> E[Vector Store\nPinecone]
+  B --> F[Object Storage\nR2-compatible S3 API]
+  B --> G[Realtime Channel\nSocket.io]
+```
 
-### Backend (server)
+---
 
-- Runtime: Node.js + Express + TypeScript
-- Database: PostgreSQL (Neon) with Drizzle ORM and migrations
-- Auth: JWT + cookies + middleware-driven route protection
-- Real-time: Socket.io
-- Storage integration: AWS SDK-based object storage integration (R2-compatible configuration)
-- AI integrations: LangChain, OpenAI, Google GenAI, Pinecone, Llama Cloud
+## Tech Stack
 
-API domains include:
+### Frontend
+
+- ⚡ Next.js 16 (App Router)
+- ⚛️ React 19
+- 🧩 TypeScript 5
+- 🎨 Tailwind CSS 4 + Radix UI
+- 🗃️ Zustand state management
+- ✅ React Hook Form + Zod validation
+- 🌐 Axios API client with auth interceptors
+- 📊 Recharts + Mermaid + KaTeX/Markdown rendering
+
+### Backend
+
+- 🚀 Express 4 + TypeScript
+- 🗄️ PostgreSQL (Neon) + Drizzle ORM/Drizzle Kit
+- 🔐 JWT auth + cookies + bcryptjs
+- 🔌 Socket.io for realtime features
+- ☁️ AWS SDK (R2-compatible object storage)
+- 🧠 LangChain + OpenAI + Google GenAI + Pinecone + Llama Cloud
+
+---
+
+## Core Backend API Domains
 
 - auth
 - courses
@@ -68,106 +84,105 @@ API domains include:
 - materials
 - chats and math-chats
 - research-papers
-- exam-patterns, generated-exams, exam-sessions, exam-results
+- exam-patterns
+- generated-exams
+- exam-sessions
+- exam-results
 - study-paths
 
-## Technology Stack
+---
 
-### Frontend
+## Quick Start
 
-- Next.js 16
-- React 19
-- TypeScript 5
-- Tailwind CSS 4
-- Radix UI
-- Zustand
-- React Hook Form + Zod
-- Axios
-
-### Backend
-
-- Express 4
-- TypeScript 5
-- Drizzle ORM + Drizzle Kit
-- PostgreSQL (Neon)
-- Socket.io
-- JWT + bcryptjs
-- LangChain + OpenAI + Google GenAI + Pinecone
-
-## Getting Started
-
-## 1) Prerequisites
+### 1. Prerequisites
 
 - Node.js 20+
-- pnpm (for frontend) and npm (for backend), or standardize to one package manager
+- pnpm (frontend) and npm (backend)
 - PostgreSQL connection string (Neon recommended)
 
-## 2) Install Dependencies
+### 2. Install Dependencies
 
 Frontend:
 
-    cd client
-    pnpm install
+```bash
+cd client
+pnpm install
+```
 
 Backend:
 
-    cd server
-    npm install
+```bash
+cd server
+npm install
+```
 
-## 3) Environment Setup
+### 3. Configure Environment Variables
 
 Backend:
 
-- Copy server/.env.example to server/.env
-- Fill database, auth, mail, storage, and AI provider keys
+- Copy `server/.env.example` to `server/.env`
+- Fill database, auth, email, storage, and AI provider values
 
 Frontend:
 
-- Set NEXT_PUBLIC_BACKEND_BASE_URL (defaults to http://localhost:8000)
+- Set `NEXT_PUBLIC_BACKEND_BASE_URL`
+- Default is `http://localhost:8000`
 
-## 4) Run in Development
+### 4. Run Development Servers
 
 Backend:
 
-    cd server
-    npm run dev
+```bash
+cd server
+npm run dev
+```
 
 Frontend:
 
-    cd client
-    pnpm dev
+```bash
+cd client
+pnpm dev
+```
 
-Default local URLs:
+Default URLs:
 
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 
-## Database Workflow
+---
 
-Run from server directory:
+## Database Commands
 
-    npm run db:generate
-    npm run db:migrate
-    npm run db:studio
+Run from `server/`:
 
-## Engineering Notes
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:studio
+```
 
-- Coding standards and architecture guidance live in AGENTS.md
-- Frontend and backend follow strict TypeScript-first conventions
-- API routes are modularized by domain and mounted under /api/*
+---
 
-## Current Project Status Snapshot
+## Engineering Standards
 
-This repository already includes:
+- Code quality and architectural guidance are defined in `AGENTS.md`
+- Strict TypeScript-first development across frontend and backend
+- Domain-driven modularization for routes, components, and services
 
-- A production-style frontend structure with domain-driven components
-- A multi-domain backend API with modular routes/controllers
-- Drizzle migration history and database tooling
-- AI-ready integrations for chat, study support, and content workflows
+---
 
-## Next Improvements (Optional)
+## Project Status
 
-- Add a root-level workspace package manager strategy (single lockfile workflow)
-- Add root scripts for one-command local startup
-- Add testing and CI sections to this README as tests are finalized
-- Add architecture diagram images in docs/ for onboarding
+✅ Domain-structured Next.js frontend
+✅ Multi-module Express API backend
+✅ Drizzle migration tooling in place
+✅ AI integrations for personalized study workflows
+
+---
+
+## Roadmap Ideas
+
+- Add one-command root scripts for local development
+- Add test coverage and CI/CD pipeline documentation
+- Add deployment guide and environment matrix
+- Add architecture images in a dedicated docs directory
