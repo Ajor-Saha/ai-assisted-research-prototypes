@@ -1,8 +1,6 @@
-# CourseWise Assistant
+# CourseWise — AI-Powered Study Assistant
 
-### Learn Smarter with AI-Powered Course Management
-
-An end-to-end learning platform that combines course operations, AI study assistance, exam systems, and personalized study workflows.
+A full-stack monorepo thesis prototype combining course management, multiple AI study assistants, an exam engine, and personalized learning workflows.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react)
@@ -12,17 +10,11 @@ An end-to-end learning platform that combines course operations, AI study assist
 
 ---
 
-## What Is CourseWise?
+## Overview
 
-CourseWise is a full-stack monorepo application built for students and educators who want an AI-enhanced study ecosystem.
+CourseWise is a student-facing learning platform that integrates multiple AI providers into a single cohesive study environment. It lets students organise their courses, upload study materials, get AI-assisted explanations, practise with auto-generated exams, and receive personalised study plans — all from one dashboard.
 
-It helps you:
-
-- 📚 Manage courses, topics, and learning materials
-- 🤖 Use AI assistants for math, text, and research support
-- 📝 Generate and track exam patterns, sessions, and results
-- 🧭 Build personalized study paths
-- 📈 Monitor learning analytics and performance trends
+This repository is **Prototype 2** of the thesis project, consolidating all feature modules into a single deployable application.
 
 ---
 
@@ -30,11 +22,61 @@ It helps you:
 
 ```text
 p-2-all-prototypes/
-├── client/         # Next.js frontend (App Router)
-├── server/         # Express + TypeScript backend API
-├── AGENTS.md       # Team coding standards and architecture guidance
+├── client/     # Next.js 16 frontend (App Router)
+├── server/     # Express 4 + TypeScript REST API
+├── AGENTS.md   # Coding standards & architecture guide
 └── README.md
 ```
+
+---
+
+## Features
+
+### Course & Content Management
+- Create courses with descriptions; organise them into topics with ordered indices
+- Upload study materials (PDFs and documents) per topic; files stored in R2-compatible object storage
+- Materials are auto-parsed and chunked for RAG-based retrieval via LlamaCloud + Pinecone
+
+### AI Text Assistant (RAG Chat)
+- Per-course AI chat that answers questions grounded in uploaded materials
+- Full chat history persisted per session; streaming-ready architecture
+
+### Math Assistant
+- Powered by **Google Gemini** (`gemini-3-flash-preview`) via LangChain
+- Returns structured step-by-step solutions with LaTeX-formatted math rendered client-side via **KaTeX**
+- Automatically generates **Mermaid diagrams** when a visualisation is requested
+- Integrated web search for additional references; sources persisted alongside messages
+
+### Research Assistant
+- Upload academic PDF papers; parsed via **LlamaCloud** and embedded with **OpenAI `text-embedding-3-large`**
+- Vectors stored in **Pinecone**; queries use semantic RAG retrieval with cited source passages
+- Papers and their chunk metadata stored in PostgreSQL for reuse across sessions
+
+### Exam Engine
+- **Exam Patterns**: Configure question-type distribution (MCQ, short-answer, etc.) and difficulty levels
+- **Generated Exams**: AI auto-generates complete exams from course materials matching a chosen pattern
+- **Exam Sessions**: Timed, interactive exam-taking interface with live answer tracking
+- **Exam Results**: Scored results with per-question feedback; full history per course
+
+### Personalised Study Paths
+- AI generates a structured study plan from course topics and uploaded materials
+- Output includes prioritised tasks (high/medium/low), time estimates, due dates, and strategic insights
+
+### Performance Analytics
+- Topic-level accuracy breakdown with bar charts (Recharts)
+- Quiz history trend tracking
+- AI-driven recommendations highlighting weak areas and suggesting revision actions
+
+### Bilingual Voice Assistant (Prototype)
+- Supports both **Bangla** and **English** voice queries
+- Language toggle with voice-to-text input and text-to-speech response playback
+
+### Other
+- Dark/light mode via CSS variables and `next-themes`
+- PYQ (Previous Year Questions) analysis view
+- Book/material library browser
+- Profile and security settings (password, email)
+- Real-time socket channel (Socket.io) scaffolded for future collaborative features
 
 ---
 
@@ -42,147 +84,130 @@ p-2-all-prototypes/
 
 ```mermaid
 flowchart LR
-  A[Next.js Client App] -->|HTTP + Cookies + Bearer Token| B[Express API Server]
+  A[Next.js Client] -->|HTTP + JWT Cookie| B[Express API]
   B -->|Drizzle ORM| C[(Neon PostgreSQL)]
-  B --> D[AI Providers\nOpenAI, Google GenAI, LangChain]
-  B --> E[Vector Store\nPinecone]
-  B --> F[Object Storage\nR2-compatible S3 API]
-  B --> G[Realtime Channel\nSocket.io]
+  B --> D[Google Gemini\nLangChain]
+  B --> E[OpenAI\nEmbeddings + GPT]
+  B --> F[LlamaCloud\nPDF Parsing]
+  B --> G[Pinecone\nVector Store]
+  B --> H[Cloudflare R2\nFile Storage]
+  B --> I[Socket.io\nRealtime]
 ```
 
 ---
 
 ## Tech Stack
 
-### Frontend
+### Frontend (`client/`)
 
-- ⚡ Next.js 16 (App Router)
-- ⚛️ React 19
-- 🧩 TypeScript 5
-- 🎨 Tailwind CSS 4 + Radix UI
-- 🗃️ Zustand state management
-- ✅ React Hook Form + Zod validation
-- 🌐 Axios API client with auth interceptors
-- 📊 Recharts + Mermaid + KaTeX/Markdown rendering
+| Concern | Library |
+|---|---|
+| Framework | Next.js 16 (App Router) + React 19 |
+| Language | TypeScript 5 (strict) |
+| Styling | Tailwind CSS 4 + Radix UI primitives |
+| Components | shadcn/ui pattern (`components/ui/`) |
+| State | Zustand 5 (per-domain stores) |
+| Forms | React Hook Form 7 + Zod 4 |
+| HTTP | Axios with auth interceptors |
+| Math rendering | KaTeX + `rehype-katex` + `remark-math` |
+| Diagrams | Mermaid 11 |
+| Markdown | `react-markdown` + `remark-gfm` |
+| Charts | Recharts 2 |
 
-### Backend
+### Backend (`server/`)
 
-- 🚀 Express 4 + TypeScript
-- 🗄️ PostgreSQL (Neon) + Drizzle ORM/Drizzle Kit
-- 🔐 JWT auth + cookies + bcryptjs
-- 🔌 Socket.io for realtime features
-- ☁️ AWS SDK (R2-compatible object storage)
-- 🧠 LangChain + OpenAI + Google GenAI + Pinecone + Llama Cloud
-
----
-
-## Core Backend API Domains
-
-- auth
-- courses
-- topics
-- materials
-- chats and math-chats
-- research-papers
-- exam-patterns
-- generated-exams
-- exam-sessions
-- exam-results
-- study-paths
+| Concern | Library |
+|---|---|
+| Framework | Express 4 + TypeScript |
+| Database | Neon PostgreSQL + Drizzle ORM + Drizzle Kit |
+| Auth | JWT (`jsonwebtoken`) + HTTP-only cookies + `bcryptjs` |
+| AI — Math | Google Gemini via `@langchain/google-genai` |
+| AI — Embeddings | OpenAI `text-embedding-3-large` via `@langchain/openai` |
+| AI — PDF Parsing | LlamaCloud (`@llamaindex/llama-cloud`) |
+| Vector Store | Pinecone via `@langchain/pinecone` |
+| File Storage | AWS SDK v3 (Cloudflare R2 endpoint) |
+| Realtime | Socket.io 4 |
+| Email | Nodemailer |
+| PDF Generation | PDFKit |
 
 ---
 
 ## Quick Start
 
-### 1. Prerequisites
+### Prerequisites
 
 - Node.js 20+
-- pnpm (frontend) and npm (backend)
-- PostgreSQL connection string (Neon recommended)
+- pnpm (frontend), npm (backend)
+- Neon PostgreSQL connection string
 
-### 2. Install Dependencies
-
-Frontend:
+### Install
 
 ```bash
-cd client
-pnpm install
+# Frontend
+cd client && pnpm install
+
+# Backend
+cd server && npm install
 ```
 
-Backend:
+### Environment Variables
+
+Copy `server/.env.example` → `server/.env` and fill in:
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `JWT_SECRET` | Token signing secret |
+| `GEMINI_API_KEY` | Google Gemini (Math Assistant) |
+| `OPENAI_API_KEY` | OpenAI embeddings + GPT |
+| `PINECONE_API_KEY` | Pinecone vector store |
+| `LLAMA_CLOUD_API_KEY` | LlamaCloud PDF parsing |
+| `ACCESS_KEY_ID` / `SECRET_ACCESS_KEY` / `ENDPOINT_URL` | Cloudflare R2 storage |
+| `EMAIL_*` | Nodemailer SMTP config |
+
+Frontend: set `NEXT_PUBLIC_BACKEND_BASE_URL` (default: `http://localhost:8000`).
+
+### Run
+
+```bash
+# Backend  (http://localhost:8000)
+cd server && npm run dev
+
+# Frontend (http://localhost:3000)
+cd client && pnpm dev
+```
+
+### Database
 
 ```bash
 cd server
-npm install
+npm run db:generate   # generate migrations
+npm run db:migrate    # apply migrations
+npm run db:studio     # open Drizzle Studio
+npm run db:seed       # seed initial data
 ```
-
-### 3. Configure Environment Variables
-
-Backend:
-
-- Copy `server/.env.example` to `server/.env`
-- Fill database, auth, email, storage, and AI provider values
-
-Frontend:
-
-- Set `NEXT_PUBLIC_BACKEND_BASE_URL`
-- Default is `http://localhost:8000`
-
-### 4. Run Development Servers
-
-Backend:
-
-```bash
-cd server
-npm run dev
-```
-
-Frontend:
-
-```bash
-cd client
-pnpm dev
-```
-
-Default URLs:
-
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000
 
 ---
 
-## Database Commands
+## API Routes
 
-Run from `server/`:
-
-```bash
-npm run db:generate
-npm run db:migrate
-npm run db:studio
-```
+| Prefix | Domain |
+|---|---|
+| `/api/auth` | Registration, login, profile |
+| `/api/courses` | Course CRUD |
+| `/api/topics` | Topic CRUD per course |
+| `/api/materials` | Upload, parse, retrieve materials |
+| `/api/chats` | RAG text assistant chat |
+| `/api/math-chats` | Math assistant with web search |
+| `/api/research-papers` | Research paper upload + RAG chat |
+| `/api/exam-patterns` | Exam pattern configuration |
+| `/api/generated-exams` | AI exam generation |
+| `/api/exam-sessions` | Timed exam sessions |
+| `/api/exam-results` | Results and scoring |
+| `/api/study-paths` | AI study path generation |
 
 ---
 
 ## Engineering Standards
 
-- Code quality and architectural guidance are defined in `AGENTS.md`
-- Strict TypeScript-first development across frontend and backend
-- Domain-driven modularization for routes, components, and services
-
----
-
-## Project Status
-
-✅ Domain-structured Next.js frontend
-✅ Multi-module Express API backend
-✅ Drizzle migration tooling in place
-✅ AI integrations for personalized study workflows
-
----
-
-## Roadmap Ideas
-
-- Add one-command root scripts for local development
-- Add test coverage and CI/CD pipeline documentation
-- Add deployment guide and environment matrix
-- Add architecture images in a dedicated docs directory
+Defined in `AGENTS.md`: strict TypeScript, domain-driven modularisation, consistent `{ success, data, error }` response envelope, custom error classes, and Zod validation on all inputs.
