@@ -129,23 +129,28 @@ export default function UpdateProfilePage() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <Card className="lg:col-span-1">
-        <CardHeader>
-          <CardTitle>Profile Picture</CardTitle>
+      <Card className="lg:col-span-1 relative overflow-hidden border-violet-200 dark:border-violet-800">
+        <div className="absolute inset-0 bg-linear-to-br from-violet-50 via-white to-white dark:from-violet-950/20 dark:via-background dark:to-background pointer-events-none" />
+        <div className="absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-violet-100/50 dark:bg-violet-900/10 pointer-events-none" />
+        <CardHeader className="relative">
+          <CardTitle className="text-base text-violet-900 dark:text-violet-100">Profile Picture</CardTitle>
           <CardDescription>Upload a clear headshot for your account identity.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="relative space-y-4">
           <div className="flex justify-center">
-            <Avatar className="h-24 w-24 rounded-2xl">
-              {avatarSource ? <AvatarImage src={avatarSource} alt={user.firstName} /> : null}
-              <AvatarFallback className="rounded-2xl bg-primary/10">
-                <User className="h-6 w-6 text-primary" />
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-violet-400/20 blur-md" />
+              <Avatar className="relative h-24 w-24 rounded-2xl ring-2 ring-violet-500/30">
+                {avatarSource ? <AvatarImage src={avatarSource} alt={user.firstName} /> : null}
+                <AvatarFallback className="rounded-2xl bg-violet-100 dark:bg-violet-900/50">
+                  <User className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
           </div>
 
           <label htmlFor="avatar-upload" className="block">
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm cursor-pointer hover:bg-muted/60 transition-colors">
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-violet-300 dark:border-violet-700 p-4 text-sm cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors text-violet-700 dark:text-violet-300">
               {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
               {isUploadingAvatar ? "Uploading..." : "Upload new photo"}
             </div>

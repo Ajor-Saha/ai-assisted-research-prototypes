@@ -129,7 +129,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
           ? ('none' as const)
           : ('lax' as const),
       ...(process.env.NODE_ENV === 'production' && {
-        domain: '.taskforges.com',
+        domain: '.devtunnels.ms',
       }),
       path: '/',
     };
@@ -170,7 +170,7 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
           ? ('none' as const)
           : ('lax' as const),
       ...(process.env.NODE_ENV === 'production' && {
-        domain: '.taskforges.com',
+        domain: '.devtunnels.ms',
       }),
       path: '/',
     };

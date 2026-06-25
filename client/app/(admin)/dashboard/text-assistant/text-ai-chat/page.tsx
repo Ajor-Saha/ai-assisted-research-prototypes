@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { BookOpen } from "lucide-react";
 
 // Mock data generator - in a real app, this would call an AI API
 function generateExplanation(topic: string) {
@@ -186,6 +187,27 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* Assistant Banner */}
+      <div className="relative overflow-hidden border-b bg-linear-to-r from-teal-500 via-cyan-500 to-sky-500 px-4 sm:px-6 py-3">
+        <div className="absolute inset-0 bg-linear-to-br from-white/10 to-transparent" />
+        <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur">
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white leading-tight">AI Text Assistant</p>
+              <p className="text-xs text-white/70">Step-by-step explanations with key concepts</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+            <span className="text-xs text-white font-medium">Online</span>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">

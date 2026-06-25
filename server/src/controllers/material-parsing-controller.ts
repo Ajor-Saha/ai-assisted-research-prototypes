@@ -7,11 +7,14 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
 import { Pinecone as PineconeClient } from '@pinecone-database/pinecone';
 import { Document } from '@langchain/core/documents';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiResponse } from '../utils/api-response';
 import { db } from '../db';
 import { materialTable, materialChunksTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { createR2Client } from '../utils/upload-r2';
 
 // Initialize Pinecone (lazy initialization)
 let pinecone: PineconeClient | null = null;
@@ -135,27 +138,42 @@ export const parseMaterialContentInternal = async (
       .set({ parsingStatus: 'processing' })
       .where(eq(materialTable.materialId, materialId));
 
-    console.log('📥 Downloading file from URL:', fileUrl);
+    console.log('📥 Downloading file from R2:', fileUrl);
 
-    // Download file from URL
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      throw new Error('Failed to download file from URL');
+    // Extract R2 key from URL and download via SDK to avoid CDN URL-decoding mismatch
+    const publicBaseUrl = process.env.PUBLIC_ACCESS_URL || '';
+    const r2Key = fileUrl.startsWith(publicBaseUrl)
+      ? fileUrl.slice(publicBaseUrl.length + 1)
+      : decodeURIComponent(new URL(fileUrl).pathname.slice(1));
+
+    const r2 = createR2Client();
+    const getCommand = new GetObjectCommand({
+      Bucket: process.env.BUCKET_NAME!,
+      Key: r2Key,
+    });
+
+    const r2Response = await r2.send(getCommand);
+    if (!r2Response.Body) {
+      throw new Error('File not found in R2 storage');
     }
 
-    // Get file extension from material name or URL
+    // Get file extension from material name
     const fileExtension = material.name
       ? path.extname(material.name)
-      : path.extname(new URL(fileUrl).pathname) || '.pdf';
+      : '.pdf';
 
     // Create temporary file with proper extension
     const tempDir = '/tmp';
     const tempFileName = `${materialId}-${Date.now()}${fileExtension}`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Save file to temp location
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Stream R2 response body into a buffer
+    const readable = r2Response.Body as Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of readable) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const buffer = Buffer.concat(chunks);
     await fs.writeFile(tempFilePath, buffer);
 
     console.log('📄 Processing material:', material.name);

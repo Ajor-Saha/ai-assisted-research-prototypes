@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BookOpen, Brain, Calendar, FolderTree, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,12 +10,16 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <span className="text-xl font-bold text-foreground">CourseWise</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/Gemini_Generated_Image_40b5sf40b5sf40b5.png"
+              alt="Kogno Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+            <span className="text-xl font-bold text-foreground">Kogno</span>
+          </Link>
           <Link href="/dashboard">
             <Button variant="outline">Dashboard</Button>
           </Link>
@@ -143,7 +148,7 @@ export default function Home() {
             Ready to Transform Your Learning?
           </h2>
           <p className="text-lg mb-8 text-blue-50">
-            Join students who are reducing stress and improving their academic performance with CourseWise.
+            Join students who are reducing stress and improving their academic performance with Kogno.
           </p>
           <Link href="/dashboard">
             <Button size="lg" variant="secondary" className="text-lg px-8 h-14 gap-2">
@@ -159,11 +164,17 @@ export default function Home() {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="font-semibold text-foreground">CourseWise</span>
+              <Image
+                src="/Gemini_Generated_Image_40b5sf40b5sf40b5.png"
+                alt="Kogno Logo"
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded-full object-cover"
+              />
+              <span className="font-semibold text-foreground">Kogno</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2026 CourseWise. Your personalized study companion.
+              © 2026 Kogno. Your personalized study companion.
             </p>
           </div>
         </div>

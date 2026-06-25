@@ -115,7 +115,7 @@ export default function Page() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b">
         <div className="flex items-center gap-2 px-4 w-full justify-between">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
@@ -148,68 +148,103 @@ export default function Page() {
           </div>
         </div>
       </header>
-      <div className="flex flex-1 flex-col gap-6 p-6 pt-4">
-        {/* Welcome Header */}
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user?.firstName || 'Student'}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            Here&apos;s an overview of your learning journey
-          </p>
+
+      <div className="flex flex-1 flex-col gap-6 p-6 pt-5">
+        {/* Welcome Hero Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-violet-600 via-indigo-600 to-blue-600 p-6 sm:p-8 text-white shadow-lg">
+          <div className="absolute inset-0 bg-linear-to-br from-white/10 to-transparent" />
+          <div className="absolute -top-8 -right-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-medium text-white/80 uppercase tracking-wider">Learning Active</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">
+                Welcome back, {user?.firstName || 'Student'}! 👋
+              </h1>
+              <p className="text-white/70 text-sm sm:text-base">
+                Here&apos;s an overview of your learning journey
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-3 bg-white/15 backdrop-blur rounded-xl px-4 py-3 border border-white/20">
+              <Sparkles className="h-8 w-8 text-yellow-300" />
+              <div>
+                <p className="text-xs text-white/70">AI Assistants</p>
+                <p className="text-lg font-bold">Ready</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          {/* Courses */}
+          <Card className="relative overflow-hidden border-0 shadow-sm bg-linear-to-br from-violet-500 to-purple-600 text-white">
+            <div className="absolute -top-4 -right-4 h-20 w-20 rounded-full bg-white/10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{courses.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">Active learning paths</p>
-              <Progress value={courses.length > 0 ? 100 : 0} className="mt-2 h-1" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Topics Covered</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-14" /> : totalTopics}
+              <CardTitle className="text-sm font-medium text-white/80">Total Courses</CardTitle>
+              <div className="p-2 rounded-lg bg-white/20">
+                <BookOpen className="h-4 w-4 text-white" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Across all courses</p>
-              <Progress value={totalTopics > 0 ? Math.min((totalTopics / 20) * 100, 100) : 0} className="mt-2 h-1" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{courses.length}</div>
+              <p className="text-xs text-white/70 mt-1">Active learning paths</p>
+              <Progress value={courses.length > 0 ? 100 : 0} className="mt-3 h-1.5 bg-white/20 [&>div]:bg-white" />
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Topics */}
+          <Card className="relative overflow-hidden border-0 shadow-sm bg-linear-to-br from-blue-500 to-cyan-500 text-white">
+            <div className="absolute -top-4 -right-4 h-20 w-20 rounded-full bg-white/10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Study Materials</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-14" /> : totalMaterials}
+              <CardTitle className="text-sm font-medium text-white/80">Topics Covered</CardTitle>
+              <div className="p-2 rounded-lg bg-white/20">
+                <Layers className="h-4 w-4 text-white" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Uploaded resources</p>
-              <Progress value={totalMaterials > 0 ? Math.min((totalMaterials / 50) * 100, 100) : 0} className="mt-2 h-1" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {statsLoading ? <Skeleton className="h-9 w-14 bg-white/30" /> : totalTopics}
+              </div>
+              <p className="text-xs text-white/70 mt-1">Across all courses</p>
+              <Progress value={totalTopics > 0 ? Math.min((totalTopics / 20) * 100, 100) : 0} className="mt-3 h-1.5 bg-white/20 [&>div]:bg-white" />
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Materials */}
+          <Card className="relative overflow-hidden border-0 shadow-sm bg-linear-to-br from-emerald-500 to-teal-500 text-white">
+            <div className="absolute -top-4 -right-4 h-20 w-20 rounded-full bg-white/10" />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Progress</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-white/80">Study Materials</CardTitle>
+              <div className="p-2 rounded-lg bg-white/20">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{completionRate}%</div>
-              <p className="text-xs text-muted-foreground mt-1">Overall completion</p>
-              <Progress value={completionRate} className="mt-2 h-1" />
+              <div className="text-3xl font-bold">
+                {statsLoading ? <Skeleton className="h-9 w-14 bg-white/30" /> : totalMaterials}
+              </div>
+              <p className="text-xs text-white/70 mt-1">Uploaded resources</p>
+              <Progress value={totalMaterials > 0 ? Math.min((totalMaterials / 50) * 100, 100) : 0} className="mt-3 h-1.5 bg-white/20 [&>div]:bg-white" />
+            </CardContent>
+          </Card>
+
+          {/* Progress */}
+          <Card className="relative overflow-hidden border-0 shadow-sm bg-linear-to-br from-amber-500 to-orange-500 text-white">
+            <div className="absolute -top-4 -right-4 h-20 w-20 rounded-full bg-white/10" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-white/80">Progress</CardTitle>
+              <div className="p-2 rounded-lg bg-white/20">
+                <TrendingUp className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{completionRate}%</div>
+              <p className="text-xs text-white/70 mt-1">Overall completion</p>
+              <Progress value={completionRate} className="mt-3 h-1.5 bg-white/20 [&>div]:bg-white" />
             </CardContent>
           </Card>
         </div>
@@ -217,40 +252,42 @@ export default function Page() {
         {/* Quick Actions & AI Assistants */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Quick Actions */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2 mb-0.5">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <CardTitle className="text-base">Quick Actions</CardTitle>
+              </div>
               <CardDescription>Get started quickly</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <CreateCourseDialog />
-              {/* <Button variant="outline" className="w-full justify-start gap-2" disabled>
-                <Upload className="h-4 w-4" />
-                Upload Materials
-              </Button> */}
-              
             </CardContent>
           </Card>
 
           {/* Math Assistant */}
-          <Card className="lg:col-span-1 hover:shadow-lg transition-shadow border-purple-200 dark:border-purple-900 bg-linear-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+          <Card className="relative overflow-hidden border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 duration-200">
+            <div className="absolute inset-0 bg-linear-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-background dark:to-background" />
+            <div className="absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-purple-100/60 dark:bg-purple-900/20" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/50 shadow-sm">
                   <Calculator className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Math Assistant</CardTitle>
+                  <CardTitle className="text-base text-purple-900 dark:text-purple-100">Math Assistant</CardTitle>
                   <CardDescription>AI-powered math help</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <p className="text-sm text-muted-foreground mb-4">
-                Solve complex problems with step-by-step explanations
+                Solve complex problems with step-by-step explanations and visualizations.
               </p>
               <Link href="/dashboard/math-assistant/math-ai-chat">
-                <Button className="w-full gap-2 bg-purple-600 hover:bg-purple-700">
+                <Button className="w-full gap-2 bg-purple-600 hover:bg-purple-700 shadow-sm">
                   Open Math Assistant
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -259,24 +296,26 @@ export default function Page() {
           </Card>
 
           {/* Research Assistant */}
-          <Card className="lg:col-span-1 hover:shadow-lg transition-shadow border-blue-200 dark:border-blue-900 bg-linear-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+          <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 duration-200">
+            <div className="absolute inset-0 bg-linear-to-br from-blue-50 via-white to-white dark:from-blue-950/30 dark:via-background dark:to-background" />
+            <div className="absolute top-0 right-0 h-24 w-24 rounded-bl-full bg-blue-100/60 dark:bg-blue-900/20" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/50 shadow-sm">
                   <BookMarked className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Research Assistant</CardTitle>
+                  <CardTitle className="text-base text-blue-900 dark:text-blue-100">Research Assistant</CardTitle>
                   <CardDescription>Academic research help</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <p className="text-sm text-muted-foreground mb-4">
-                Analyze papers and get insights with citations
+                Analyze papers and get insights with citations and references.
               </p>
               <Link href="/dashboard/research-assistant/research-ai-chat">
-                <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
+                <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm">
                   Open Research Assistant
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -285,22 +324,25 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* Recent Courses or All Courses */}
+        {/* Section Header - Courses */}
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              {courses.length > 3 ? 'Recent Courses' : 'My Courses'}
-            </h2>
-            <p className="text-muted-foreground">
-              {courses.length > 3 
-                ? 'Your most recently updated courses' 
-                : 'Manage your courses and track your learning progress'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1 rounded-full bg-linear-to-b from-violet-500 to-blue-500" />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">
+                {courses.length > 3 ? 'Recent Courses' : 'My Courses'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {courses.length > 3
+                  ? 'Your most recently updated courses'
+                  : 'Manage your courses and track your learning progress'}
+              </p>
+            </div>
           </div>
           {courses.length > 3 && (
             <Link href="/dashboard/courses">
-              <Button variant="outline" className="gap-2">
-                View All Courses
+              <Button variant="outline" size="sm" className="gap-2">
+                View All
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -309,25 +351,10 @@ export default function Page() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <CourseCardSkeleton />
-              <CourseCardSkeleton />
-              <CourseCardSkeleton />
-            </div>
-            <Card className="bg-linear-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-5 rounded" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-11/12" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-            </Card>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <CourseCardSkeleton />
+            <CourseCardSkeleton />
+            <CourseCardSkeleton />
           </div>
         )}
 
@@ -342,38 +369,41 @@ export default function Page() {
 
         {/* Empty State */}
         {!isLoading && courses.length === 0 && (
-          <Card className="p-12 border-dashed">
+          <Card className="p-12 border-2 border-dashed border-primary/20 bg-linear-to-br from-primary/5 to-background">
             <div className="flex flex-col items-center text-center">
-              <div className="p-4 rounded-full bg-primary/10 mb-4">
-                <Sparkles className="h-12 w-12 text-primary" />
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
+                <div className="relative p-5 rounded-full bg-linear-to-br from-violet-500 to-indigo-500">
+                  <Sparkles className="h-12 w-12 text-white" />
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Start Your Learning Journey</h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Create your first course to unlock personalized AI assistants, smart analytics, 
-                and a comprehensive study management system
+              <h3 className="text-xl font-bold mb-2">Start Your Learning Journey</h3>
+              <p className="text-muted-foreground mb-6 max-w-md text-sm">
+                Create your first course to unlock personalized AI assistants, smart analytics,
+                and a comprehensive study management system.
               </p>
               <CreateCourseDialog />
             </div>
           </Card>
         )}
 
-        {/* Learning Tips */}
+        {/* Pro Tip Banner */}
         {courses.length > 0 && (
-          <Card className="bg-linear-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Pro Tip</CardTitle>
+          <div className="relative overflow-hidden rounded-xl border border-indigo-200 dark:border-indigo-900 bg-linear-to-r from-indigo-50 via-violet-50 to-blue-50 dark:from-indigo-950/30 dark:via-violet-950/30 dark:to-blue-950/30 p-5">
+            <div className="absolute top-0 right-0 h-20 w-40 bg-linear-to-bl from-violet-200/50 to-transparent dark:from-violet-800/20 rounded-bl-full" />
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-linear-to-br from-violet-500 to-indigo-500 shadow-sm shrink-0">
+                <Sparkles className="h-4 w-4 text-white" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Use the Math Assistant for solving complex equations and the Research Assistant 
-                to analyze academic papers. Upload your study materials to get AI-powered insights 
-                and personalized recommendations.
-              </p>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200 mb-1">Pro Tip</p>
+                <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                  Use the <span className="font-semibold">Math Assistant</span> for solving complex equations and the{" "}
+                  <span className="font-semibold">Research Assistant</span> to analyze academic papers. Upload your study materials to get AI-powered insights and personalized recommendations.
+                </p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </>

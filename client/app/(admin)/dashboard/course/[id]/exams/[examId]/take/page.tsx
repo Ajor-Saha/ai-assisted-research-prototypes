@@ -334,13 +334,18 @@ export default function TakeExamPage({ params }: TakeExamPageProps): ReactElemen
             const answerPayload = answers[question.questionId] ?? {}
 
             return (
-              <Card key={question.questionId} id={question.questionId} className="scroll-mt-24">
-                <CardHeader className="space-y-2">
+              <Card key={question.questionId} id={question.questionId} className="scroll-mt-24 border-l-4" style={{ borderLeftColor: question.questionType === 'mcq' ? '#8b5cf6' : question.questionType === 'short' ? '#0ea5e9' : '#10b981' }}>
+                <CardHeader className="space-y-2 pb-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="text-base sm:text-lg">Q{index + 1}</CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{question.questionType}</Badge>
-                      <Badge variant="outline">{question.marks} marks</Badge>
+                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">{index + 1}</span>
+                      </div>
+                      <CardTitle className="text-sm sm:text-base font-semibold text-muted-foreground">Question {index + 1}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`capitalize ${question.questionType === 'mcq' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200' : question.questionType === 'short' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 border-sky-200' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200'}`} variant="outline">{question.questionType}</Badge>
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300">{question.marks} marks</Badge>
                     </div>
                   </div>
                   {question.questionCategory ? (
@@ -370,13 +375,15 @@ export default function TakeExamPage({ params }: TakeExamPageProps): ReactElemen
                               option,
                               response: option,
                             })}
-                            className={`rounded-lg border p-3 text-left transition-colors ${
+                            className={`rounded-xl border-2 p-3 text-left transition-all ${
                               selected
-                                ? "border-primary bg-primary/10"
-                                : "border-border hover:bg-muted/40"
+                                ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 shadow-sm"
+                                : "border-border hover:border-violet-200 hover:bg-violet-50/50 dark:hover:bg-violet-950/10"
                             }`}
                           >
-                            <p className="text-xs text-muted-foreground mb-1">Option {String.fromCharCode(65 + optionIndex)}</p>
+                            <div className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold mb-1.5 ${
+                              selected ? 'bg-violet-500 text-white' : 'bg-muted text-muted-foreground'
+                            }`}>{String.fromCharCode(65 + optionIndex)}</div>
                             <MarkdownBlock content={option} />
                           </button>
                         )
@@ -437,9 +444,19 @@ export default function TakeExamPage({ params }: TakeExamPageProps): ReactElemen
           })}
         </div>
 
-        <Card className="h-fit lg:sticky lg:top-20">
-          <CardHeader>
-            <CardTitle className="text-base">Question Navigator</CardTitle>
+        <Card className="h-fit lg:sticky lg:top-20 border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              </div>
+              <CardTitle className="text-base">Navigator</CardTitle>
+            </div>
+            <div className="flex gap-3 text-xs mt-1">
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />Answered</span>
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border-2 border-primary" />Active</span>
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm border border-border bg-background" />Pending</span>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <ScrollArea className="h-72 pr-2">
@@ -464,15 +481,15 @@ export default function TakeExamPage({ params }: TakeExamPageProps): ReactElemen
                           block: "start",
                         })
                       }}
-                      className={`h-10 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`h-10 rounded-lg border-2 text-xs font-semibold transition-all ${
                         activeQuestionId === question.questionId
-                          ? "border-primary bg-primary/15"
+                          ? "border-primary bg-primary/10 text-primary"
                           : attempted
-                            ? "border-emerald-400/70 bg-emerald-50 dark:bg-emerald-950/20"
-                            : "hover:bg-muted/40"
+                            ? "border-emerald-400/70 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400"
+                            : "hover:bg-muted/40 border-border"
                       }`}
                     >
-                      {attempted ? <CheckCircle2 className="h-4 w-4 mx-auto text-emerald-600" /> : `Q${index + 1}`}
+                      {attempted ? <CheckCircle2 className="h-3.5 w-3.5 mx-auto text-emerald-600" /> : index + 1}
                     </button>
                   )
                 })}
@@ -480,8 +497,10 @@ export default function TakeExamPage({ params }: TakeExamPageProps): ReactElemen
             </ScrollArea>
 
             <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground space-y-1">
-              <p>Auto-save: {isSaving ? "Saving..." : "Saved"}</p>
-              <p>Session ID: {sessionId}</p>
+              <p className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${isSaving ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+                {isSaving ? "Saving..." : "All changes saved"}
+              </p>
             </div>
 
             <Button className="w-full" onClick={() => void handleSubmit()} disabled={isSubmitting}>

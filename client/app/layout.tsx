@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CourseWise - Course-wise Personalized Study Assistant",
+  title: "Kogno - AI-Powered Study Assistant",
   description: "AI-powered learning companion that organizes course materials, maintains chat histories, and creates personalized study paths based on your learning needs and exam timelines.",
 };
 
