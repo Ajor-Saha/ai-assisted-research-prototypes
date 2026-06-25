@@ -91,12 +91,12 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
           flowchart: {
             useMaxWidth: true,
             htmlLabels: true,
-            wrappingWidth: 280,
-            nodeSpacing: 45,
-            rankSpacing: 55,
+            wrappingWidth: 420,
+            nodeSpacing: 28,
+            rankSpacing: 36,
           },
           themeVariables: {
-            fontSize: "14px",
+            fontSize: "11px",
             fontFamily: "inherit",
             background: "#ffffff00",
             primaryTextColor: getMermaidTheme() === "dark" ? "#e2e8f0" : "#0f172a",
@@ -133,6 +133,17 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
         svgElement.style.maxWidth = "100%"
         svgElement.style.height = "auto"
         svgElement.style.display = "block"
+
+        // Expand viewBox by 15% to effectively zoom out
+        const vb = svgElement.viewBox.baseVal
+        if (vb && vb.width > 0 && vb.height > 0) {
+          const padX = vb.width * 0.08
+          const padY = vb.height * 0.08
+          svgElement.setAttribute(
+            "viewBox",
+            `${vb.x - padX} ${vb.y - padY} ${vb.width + padX * 2} ${vb.height + padY * 2}`
+          )
+        }
 
         setError(null)
       } catch (renderError) {

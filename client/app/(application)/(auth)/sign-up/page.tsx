@@ -7,6 +7,7 @@ import { z } from "zod";
 import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -60,99 +61,106 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-4xl shadow-lg rounded-lg p-8 bg-slate-900">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Left Section */}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6 md:p-10">
+      <div className="w-full max-w-md">
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            <div className="flex flex-col gap-6 p-6 sm:p-8">
+              <div className="flex flex-col items-center text-center">
+                <h1 className="text-2xl font-bold">Create Your Account</h1>
+                <p className="text-balance text-sm text-muted-foreground">
+                  Join SmartStudy to organize courses, track progress, and get AI help.
+                </p>
+              </div>
 
-          {/* Right Section */}
-          <div>
-            <h2 className="text-2xl font-bold mb-6">Create Your Account</h2>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    name="firstName"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <Input {...field} placeholder="Enter your first name" />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  name="firstName"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <Input {...field} placeholder="Enter your first name" />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    name="lastName"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <Input {...field} placeholder="Enter your last name" />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  name="lastName"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <Input {...field} placeholder="Enter your last name" />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    name="email"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <Input
+                          {...field}
+                          placeholder="Enter your email"
+                          type="email"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  name="email"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <Input
-                        {...field}
-                        placeholder="Enter your email"
-                        type="email"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    name="password"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Enter your password"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  name="password"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter your password"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Please wait
+                      </>
+                    ) : (
+                      "Sign Up"
+                    )}
+                  </Button>
+                </form>
+              </Form>
 
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Please wait
-                    </>
-                  ) : (
-                    "Sign Up"
-                  )}
-                </Button>
-              </form>
-            </Form>
-
-            <div className="text-center mt-4">
-              <span className="text-sm">Already have an account? </span>
-              <Link href="/sign-in" className="text-blue-500 hover:underline">
-                Sign In
-              </Link>
+              <div className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/sign-in" className="text-primary underline underline-offset-4">
+                  Sign In
+                </Link>
+              </div>
             </div>
-          </div>
-          
+          </CardContent>
+        </Card>
         </div>
-      </div>
     </div>
   );
 }

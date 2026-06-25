@@ -30,6 +30,8 @@ app.use(
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
+      'https://bhf7x359-3000.inc1.devtunnels.ms',
+      'https://hx8dlq9c-3000.inc1.devtunnels.ms',
     ],
     credentials: true,
     maxAge: 86400,

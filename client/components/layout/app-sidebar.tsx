@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   AudioWaveform,
   BookOpen,
@@ -24,6 +25,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import useAuthStore from "@/store/store"
 import { Axios } from "@/config/axios"
@@ -32,10 +34,11 @@ import { useRouter } from "next/navigation"
 import { useCourseStore } from "@/store/course-store"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  
+
   const { user, logout } = useAuthStore();
   const { courses, fetchCourses } = useCourseStore();
   const router = useRouter();
+  const { state } = useSidebar();
   
   React.useEffect(() => {
     fetchCourses();
@@ -128,11 +131,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <h2 className="ml-2 my-2">ClarityAI</h2>
+        <div className="flex items-center gap-2.5 px-2 py-2.5">
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full bg-violet-500/30 blur-sm" />
+            <Image
+              src="/Gemini_Generated_Image_40b5sf40b5sf40b5.png"
+              alt="Kogno Logo"
+              width={32}
+              height={32}
+              className="relative h-8 w-8 rounded-full object-cover ring-2 ring-violet-500/40"
+            />
+          </div>
+          {state === "expanded" && (
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold bg-linear-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent leading-tight">
+                Kogno
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium leading-tight">AI Learning Platform</span>
+            </div>
+          )}
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        
+
       </SidebarContent>
       <SidebarFooter>
          <NavUser

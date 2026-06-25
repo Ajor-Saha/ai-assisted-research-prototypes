@@ -16,6 +16,7 @@ import {
   Globe2,
   ExternalLink,
   RefreshCw,
+  PanelLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -33,6 +34,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { MathChatSidebar } from "@/components/ai-assistants/math/math-chat-sidebar"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { MathSymbolPicker } from "@/components/ai-assistants/math/math-symbol-picker"
 import { MermaidRenderer } from "@/components/ai-assistants/math/mermaid-renderer"
 import { useMathChatStore } from "@/store/math-chat-store"
@@ -124,6 +131,7 @@ export function MathChatInterface() {
   const [messageToDelete, setMessageToDelete] = useState<MathChatMessage | null>(null)
   const [isDeletingMessage, setIsDeletingMessage] = useState(false)
   const [webSearchStates, setWebSearchStates] = useState<Record<string, MessageWebSearchState>>({})
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -776,8 +784,8 @@ export function MathChatInterface() {
 
   return (
     <div className="flex h-full bg-linear-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-950 dark:via-slate-900 dark:to-purple-950">
-      {/* Chat Sidebar */}
-      <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shrink-0 h-full overflow-hidden">
+      {/* Chat Sidebar - desktop only */}
+      <div className="hidden md:flex md:w-64 border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shrink-0 h-full overflow-hidden flex-col">
         <MathChatSidebar
           currentChatId={currentChat?.mathChatId}
           onChatSelect={handleChatSelect}
@@ -785,8 +793,38 @@ export function MathChatInterface() {
         />
       </div>
 
+      {/* Mobile Sidebar Sheet */}
+      <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+        <SheetContent side="left" className="w-72 p-0 flex flex-col">
+          <SheetHeader className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
+            <SheetTitle className="text-base">Chat History</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden">
+            <MathChatSidebar
+              currentChatId={currentChat?.mathChatId}
+              onChatSelect={(id) => { handleChatSelect(id); setIsMobileSidebarOpen(false); }}
+              onNewChat={() => { handleNewChat(); setIsMobileSidebarOpen(false); }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Chat Messages Area */}
-      <div className="flex flex-col flex-1 h-full">
+      <div className="flex flex-col flex-1 h-full min-w-0">
+        {/* Mobile top bar */}
+        <div className="flex md:hidden items-center gap-3 px-3 py-2 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setIsMobileSidebarOpen(true)}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold truncate text-slate-700 dark:text-slate-300">
+            {currentChat?.title ?? "Math Assistant"}
+          </span>
+        </div>
         {currentChat ? (
           <>
             <div className="flex-1 overflow-hidden">

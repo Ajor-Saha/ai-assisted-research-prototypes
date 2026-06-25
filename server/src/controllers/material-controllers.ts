@@ -108,9 +108,9 @@ export const createMaterial = asyncHandler(
 
           // Read the file from the temporary path
           const buffer = await fs.readFile(uploadedFile.filepath);
-          const uniqueFileName = `materials/${nanoid()}-${encodeURIComponent(
-            uploadedFile.originalFilename || 'unnamed'
-          )}`;
+          const safeFilename = (uploadedFile.originalFilename || 'unnamed')
+            .replace(/[^a-zA-Z0-9._-]/g, '_');
+          const uniqueFileName = `materials/${nanoid()}-${safeFilename}`;
 
           console.log('Uploading to R2:', {
             bucket: process.env.BUCKET_NAME,

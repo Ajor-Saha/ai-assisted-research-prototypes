@@ -15,26 +15,17 @@ import { loginSchema } from "@/schemas/auth-schema";
 import useAuthStore from "@/store/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AxiosError } from "axios";
-import { EyeOff, Loader2, Server } from "lucide-react";
+import { EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-interface ServerStatus {
-  status: 'starting' | 'waking' | 'ready' | 'error';
-  message: string;
-  uptime: number;
-  isReady: boolean;
-}
-
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
-  const [checkingServer, setCheckingServer] = useState(true);
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,37 +37,6 @@ export default function LoginPage() {
       password: "",
     },
   });
-
-  // Check server status on component mount
-  useEffect(() => {
-    checkServerStatus();
-  }, []);
-
-  const checkServerStatus = async () => {
-    setCheckingServer(true);
-    try {
-      const response = await Axios.get(`${env.BACKEND_BASE_URL}/api/auth/server-status`);
-      const statusData = response.data.data as ServerStatus;
-      setServerStatus(statusData);
-
-      // If server is not ready, check again after a delay
-      if (!statusData.isReady) {
-        setTimeout(checkServerStatus, 2000); // Check again in 2 seconds
-      }
-    } catch (error) {
-      console.error('Error checking server status:', error);
-      setServerStatus({
-        status: 'error',
-        message: 'Unable to connect to server',
-        uptime: 0,
-        isReady: false
-      });
-      // Retry after 3 seconds
-      setTimeout(checkServerStatus, 3000);
-    } finally {
-      setCheckingServer(false);
-    }
-  };
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
@@ -92,11 +52,9 @@ export default function LoginPage() {
 
       // Wait a moment for auth state to update, then navigate
       setTimeout(() => {
-        router.push("/home");
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       }, 100);
     } catch (error) {
-      console.error("Login Error:", error);
       const axiosError = error as AxiosError<{ message: string }>;
       const errorMessage =
         axiosError.response?.data.message ?? "Invalid credentials. Try again.";
@@ -113,29 +71,6 @@ export default function LoginPage() {
           <Card className="overflow-hidden">
             <CardContent className="grid p-0 md:grid-cols-2">
               <div className="flex flex-col gap-6">
-                {/* Server Status Display */}
-                {(checkingServer || !serverStatus?.isReady) && (
-                  <div className="flex flex-col items-center text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Server className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium text-blue-800 dark:text-blue-200">
-                        Server Status
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {checkingServer || !serverStatus?.isReady ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      ) : null}
-                      <span className="text-sm text-blue-700 dark:text-blue-300">
-                        {checkingServer
-                          ? "Checking server status..."
-                          : serverStatus?.message || "Connecting to server..."
-                        }
-                      </span>
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex flex-col items-center text-center">
                   <h1 className="text-2xl font-bold">Welcome back</h1>
                   <p className="text-balance text-muted-foreground">
@@ -208,18 +143,13 @@ export default function LoginPage() {
 
                       <Button
                         type="submit"
-                        disabled={isSubmitting || !serverStatus?.isReady}
+                        disabled={isSubmitting}
                         className="w-full"
                       >
                         {isSubmitting ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Please wait
-                          </>
-                        ) : !serverStatus?.isReady ? (
-                          <>
-                            <Server className="mr-2 h-4 w-4" />
-                            Server Starting...
                           </>
                         ) : (
                           "Sign In"

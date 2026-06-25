@@ -26,12 +26,12 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  // Set cookie domain to .taskforges.com to allow sharing between subdomains in production
+  // Set cookie domain to .devtunnels.ms to allow sharing between subdomains in production
   if (token && !request.cookies.get("accessToken") && process.env.NODE_ENV === 'production') {
     response.cookies.set({
       name: "accessToken",
       value: token,
-      domain: ".taskforges.com",
+      domain: ".devtunnels.ms",
       path: "/",
       secure: true,
       sameSite: "none",
